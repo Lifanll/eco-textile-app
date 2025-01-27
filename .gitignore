@@ -3,10 +3,15 @@
 # dependencies
 /node_modules
 /.pnp
+/.venv
 .pnp.js
 
 # training data
 /data
+/json
+
+# faiss
+/faiss
 
 # testing
 /coverage
