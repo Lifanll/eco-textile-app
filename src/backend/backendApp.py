@@ -127,9 +127,11 @@ async def login(request: LoginRequest):
         if not user or request.password != user[1]:
             raise HTTPException(status_code=400, detail="Wrong username or password")
 
-        # Retrieve user ID and respond
+        # Retrieve user ID, user conversations and respond
         user_id = user[0]
-        return {"successful": True, "response": "Successfully logged in", "userID": user_id}
+        cursor.execute("SELECT id, title FROM conversation WHERE userId = ?" (user_id))
+        conversations = cursor.fetchall()
+        return {"successful": True, "response": "Successfully logged in", "userID": user_id, "conversations": conversations}
 
     except Exception as e:
         print(f"Unexpected error: {e}")
