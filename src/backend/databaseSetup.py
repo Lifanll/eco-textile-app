@@ -20,11 +20,24 @@ cursor.execute("""
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
         userId INTEGER, 
         title TEXT NOT NULL, 
-        content TEXT DEFAULT '',
+        summary TEXT,
         FOREIGN KEY(userId) REFERENCES user(id)
     )
 """)
 database.commit()
+
+# Create message table to store messages in conversation
+cursor.execute("""
+    CREATE TABLE message (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversationId INTEGER,
+        isUser BOOLEAN NOT NULL,
+        image TEXT,
+        message TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(conversationId) REFERENCES conversation(id)           
+    )
+""")
 
 # Correct image table
 cursor.execute("""

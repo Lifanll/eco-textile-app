@@ -1,74 +1,271 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
 import {
-    AppBar,
-    Toolbar,
-    Typography,
     Container,
-    Button,
-    TextField,
+    Typography,
     Box,
-    Card,
-    CardContent,
-    CardActions,
-    Grid,
+    Paper,
+    TextField,
+    Button,
     CircularProgress,
+    List,
+    ListItem,
+    Divider,
+    IconButton,
+    Tooltip,
 } from "@mui/material";
-import { BrowserRouter as Router, Route, Routes, Link, useNavigate } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import DeleteIcon from "@mui/icons-material/Delete";
 
-// Conversation Interface
 function Conversation() {
-    const [question, setQuestion] = useState("");
-    const [answer, setAnswer] = useState("");
+    const { conversationId } = useParams(); // Get conversationId from URL
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState("");
+    const [uploadedImage, setUploadedImage] = useState(null); // Single image
     const [loading, setLoading] = useState(false);
+    const fileInputRef = useRef(null); // Ref for the hidden file input
 
-    const handleAskQuestion = () => {
-        if (!question.trim()) {
-            alert("Please enter a question.");
+    // Fetch messages when the component loads or conversationId changes
+    useEffect(() => {
+        const fetchMessages = async () => {
+            try {
+                const response = await fetch("http://127.0.0.1:8000/getMessages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ conversationId }),
+                });
+
+                const data = await response.json();
+                setMessages(data.messages || []);
+            } catch (error) {
+                console.error("Error fetching messages:", error);
+            }
+        };
+
+        fetchMessages();
+    }, [conversationId]);
+
+    const handleSendMessage = async () => {
+        if (!newMessage.trim() && !uploadedImage) {
+            alert("Please enter a message or upload an image.");
             return;
         }
+
         setLoading(true);
-        // Simulate fetching answer
-        setTimeout(() => {
-            setAnswer(`Response to: "${question}"`);
+
+        try {
+            // Save the image locally if one is uploaded
+            let textile = "";
+            if (uploadedImage) {
+                const formData = new FormData();
+                formData.append("image", uploadedImage);
+
+                const imageResponse = await fetch("http://127.0.0.1:8000/predict", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!imageResponse.ok) {
+                    throw new Error("Failed to process image.");
+                }
+
+                const predictionResult = await imageResponse.json();
+                textile = predictionResult.prediction; // Get the predicted class or image path
+            }
+
+            // Send the message and image path to the backend
+            const response = await fetch("http://127.0.0.1:8000/ask", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    query: newMessage,
+                    conversationID: conversationId,
+                    textile,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to send message.");
+            }
+
+            const data = await response.json();
+
+            // Update messages with user message and LLM response
+            setMessages((prevMessages) => [
+                ...prevMessages,
+                ...(newMessage ? [{ isUser: true, message: newMessage }] : []),
+                { isUser: false, message: data.response },
+            ]);
+
+            // Clear input and image state
+            setNewMessage("");
+            setUploadedImage(null);
+        } catch (error) {
+            console.error("Error sending message:", error);
+        } finally {
             setLoading(false);
-        }, 2000);
+        }
+    };
+
+    const handleFileDrop = (e) => {
+        e.preventDefault();
+        const file = Array.from(e.dataTransfer.files).find((file) =>
+            file.type.startsWith("image/")
+        );
+        if (file) {
+            setUploadedImage(file); // Allow only one image
+        }
+    };
+
+    const handleFileRemove = () => {
+        setUploadedImage(null);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+    };
+
+    const handleFileSelect = (e) => {
+        const file = Array.from(e.target.files).find((file) =>
+            file.type.startsWith("image/")
+        );
+        if (file) {
+            setUploadedImage(file); // Allow only one image
+        }
     };
 
     return (
         <Container maxWidth="md">
             <Box mt={5}>
                 <Typography variant="h5" gutterBottom>
-                    Chat
+                    Conversation {conversationId}
                 </Typography>
-                <Box
+
+                {/* Message List */}
+                <Paper
+                    elevation={3}
                     sx={{
-                        border: "1px solid #ccc",
+                        height: "400px",
+                        overflowY: "scroll",
                         borderRadius: "8px",
                         padding: "16px",
-                        height: "300px",
-                        overflowY: "scroll",
                         mb: 2,
                     }}
                 >
-                    <Typography color="textSecondary">
-                        {answer || "Response from LLM will appear here"}
-                    </Typography>
-                </Box>
+                    <List>
+                        {messages.map((msg, index) => (
+                            <React.Fragment key={index}>
+                                <ListItem
+                                    sx={{
+                                        justifyContent: msg.isUser ? "flex-end" : "flex-start",
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            textAlign: msg.isUser ? "right" : "left",
+                                            backgroundColor: msg.isUser
+                                                ? "rgba(33, 150, 243, 0.1)"
+                                                : "rgba(0, 0, 0, 0.05)",
+                                            borderRadius: "12px",
+                                            padding: "8px 16px",
+                                            maxWidth: "75%",
+                                        }}
+                                    >
+                                        <ReactMarkdown
+                                            children={msg.message}
+                                            remarkPlugins={[remarkGfm]}
+                                        />
+                                    </Box>
+                                </ListItem>
+                                <Divider variant="inset" component="li" />
+                            </React.Fragment>
+                        ))}
+                    </List>
+                </Paper>
+
+                {/* Uploaded Image */}
+                {uploadedImage && (
+                    <Box
+                        sx={{
+                            position: "relative",
+                            width: "100px",
+                            height: "100px",
+                            mb: 2,
+                        }}
+                    >
+                        <img
+                            src={URL.createObjectURL(uploadedImage)}
+                            alt="Uploaded"
+                            style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                borderRadius: "8px",
+                            }}
+                        />
+                        <IconButton
+                            onClick={handleFileRemove}
+                            sx={{
+                                position: "absolute",
+                                top: 0,
+                                right: 0,
+                                backgroundColor: "rgba(255, 255, 255, 0.8)",
+                            }}
+                        >
+                            <Tooltip title="Remove">
+                                <DeleteIcon fontSize="small" />
+                            </Tooltip>
+                        </IconButton>
+                    </Box>
+                )}
+
+                {/* Drag-and-Drop Area */}
+                <Paper
+                    elevation={2}
+                    sx={{
+                        border: "2px dashed #ccc",
+                        borderRadius: "8px",
+                        padding: "16px",
+                        textAlign: "center",
+                        mb: 2,
+                        cursor: "pointer",
+                    }}
+                    onDragOver={handleDragOver}
+                    onDrop={handleFileDrop}
+                    onClick={() => fileInputRef.current.click()} // Trigger file input on click
+                >
+                    Drag and drop an image here or click to select a file
+                </Paper>
+                <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    onChange={handleFileSelect}
+                />
+
+                {/* Input Field */}
                 <TextField
                     variant="outlined"
-                    placeholder="Ask a question..."
+                    placeholder="Type your message..."
                     fullWidth
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
                 />
-                <Box mt={2}>
+                <Box mt={2} display="flex" gap={2}>
                     <Button
                         variant="contained"
                         color="primary"
-                        onClick={handleAskQuestion}
+                        onClick={handleSendMessage}
+                        disabled={loading}
                         fullWidth
                     >
-                        {loading ? <CircularProgress size={24} /> : "Send"}
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Send"}
                     </Button>
                 </Box>
             </Box>

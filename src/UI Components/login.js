@@ -40,7 +40,7 @@ function Login() {
 
             // Save userID to localStorage for session management
             localStorage.setItem("userID", data.userID);
-            localStorage.setItem("conversations", data.conversations);
+            localStorage.setItem("username", username);
 
             // Navigate to dashboard on success
             navigate("/dashboard");

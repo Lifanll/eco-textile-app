@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List
 import sqlite3
+from uuid import uuid4
 import os
 
 # init ai
@@ -85,7 +86,10 @@ async def predict(image: UploadFile = File(...)):
     except Exception as e:
         print(f"Error during prediction: {str(e)}")  # Log the error
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+# ------------------------
+# Credentials
+# ------------------------
 class SignUpRequest(BaseModel):
     username: str
     password: str
@@ -129,14 +133,17 @@ async def login(request: LoginRequest):
 
         # Retrieve user ID, user conversations and respond
         user_id = user[0]
-        cursor.execute("SELECT id, title FROM conversation WHERE userId = ?" (user_id))
-        conversations = cursor.fetchall()
-        return {"successful": True, "response": "Successfully logged in", "userID": user_id, "conversations": conversations}
+        cursor.execute("SELECT id, title FROM conversation WHERE userId = ?", (user_id,))
+        return {"successful": True, "response": "Successfully logged in", "userID": user_id}
 
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")
 
+
+# -----------------------------
+# User Conversations Management
+# -----------------------------
 class CreateConversationRequest(BaseModel):
     userID: str
     title: str
@@ -150,7 +157,7 @@ async def create_conversation(request: CreateConversationRequest):
             raise HTTPException(status_code=400, detail="Duplicated conversation title")
         
         # Insert new conversation securely with parameterized queries
-        cursor.execute("INSERT INTO conversation (userId, titile) VALUES (?, ?)", (request.userID, request.title))
+        cursor.execute("INSERT INTO conversation (userId, title) VALUES (?, ?)", (request.userID, request.title))
         database.commit()
 
         # Retrieve the newly inserted conversation ID
@@ -162,6 +169,25 @@ async def create_conversation(request: CreateConversationRequest):
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")
+    
+class GetConversationsRequest(BaseModel):
+    userID: str
+
+@app.post("/getConversations")
+async def get_conversations(request: GetConversationsRequest):
+    try:
+        # Retrieve conversations for the given userID
+        cursor.execute("SELECT id, title FROM conversation WHERE userId = ?", (request.userID,))
+        conversations = cursor.fetchall()
+
+        # Format the result into a list of dictionaries
+        conversation_list = [{"id": row[0], "title": row[1]} for row in conversations]
+
+        return {"conversations": conversation_list}
+
+    except Exception as e:
+        print(f"Error fetching conversations: {e}")
+        raise HTTPException(status_code=500, detail="Could not fetch conversations")
 
 class DeleteConversationRequest(BaseModel):
     userID: str
@@ -185,32 +211,77 @@ async def delete_conversation(request: DeleteConversationRequest):
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")
 
-# Define the request body using Pydantic
+# ----------------------------------
+# Conversation Messages Management
+# ----------------------------------
 class AskRequest(BaseModel):
     query: str
-    conversationID: str
+    conversationID: int
+    textile: str = None
 
 @app.post("/ask")
 async def ask_question(request: AskRequest):
-    """
-    Response to user question
-    """
     try:
-        # Pass context to LLM for generation
+        # Combine the user's query with the prediction result
+        modified_query = (
+            f"{request.textile}"
+            f"Based on the provided query, provide practical suggestions. "
+            f"Include eco-friendly options while considering durability, affordability, ease of use, and user preferences. "
+            f"Address alternatives, laundering methods, recycling options, upcycling ideas, and disposal practices. "
+            f"Here is the user's query: {request.query}"
+        )
+
+        print(modified_query)
+
+        # Save the user's message (and image path) into the database
+        cursor.execute("""
+            INSERT INTO message (conversationId, isUser, image, message) 
+            VALUES (?, ?, ?, ?)
+        """, (request.conversationID, True, None, request.query))
+        database.commit()
+
+        # Get response from the LLM
         chat_completion = client.chat.completions.create(
             messages=[
                 {
                     "role": "user",
-                    "content": request.query,
-                }
+                    "content": modified_query},
             ],
             model="gpt-4o-mini",
         )
         generated_text = chat_completion.choices[0].message.content
+
+        # Save the LLM's response into the database
+        cursor.execute("""
+            INSERT INTO message (conversationId, isUser, image, message) 
+            VALUES (?, ?, ?, ?)
+        """, (request.conversationID, False, None, generated_text))
+        database.commit()
+
         return {"response": generated_text}
+
     except Exception as e:
-        print(str(e))
+        print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+    
+class GetMessagesRequest(BaseModel):
+    conversationId: int
+
+@app.post("/getMessages")
+async def get_messages(request: GetMessagesRequest):
+    try:
+        cursor.execute("""
+            SELECT message, isUser, image, timestamp
+            FROM message
+            WHERE conversationId = ?
+            ORDER BY timestamp ASC
+        """, (request.conversationId,))
+        messages = cursor.fetchall()
+        return {"messages": [{"message": row[0], "isUser": row[1], "timestamp": row[2]} for row in messages]}
+    except Exception as e:
+        print(f"Error fetching messages: {e}")
+        raise HTTPException(status_code=500, detail="Error fetching messages")
 
 # Run using `uvicorn`:
 # uvicorn src.backend.backendApp:app --host 127.0.0.1 --port 8000 --reload

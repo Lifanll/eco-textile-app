@@ -38,8 +38,14 @@ function SignUp() {
                 throw new Error("Failed to sign up. Please try again.");
             }
 
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
             // Save userID to localStorage for session management
             localStorage.setItem("userID", data.userID);
+            localStorage.setItem("username", username);
 
             navigate("/dashboard");
         } catch (error) {
