@@ -17,7 +17,7 @@ import os
 # init ai
 openai_api_key = "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"
 client = OpenAI(
-    api_key = openai_api_key,  # This is the default and can be omitted
+    api_key=openai_api_key,  # This is the default and can be omitted
 )
 
 # connect to database
@@ -38,7 +38,8 @@ app.add_middleware(
 
 
 # Define label mapping
-labels = {v: k for k, v in {'canvas': 0, 'chambray': 1, 'chenille': 2, 'chiffon': 3, 'corduroy': 4, 'crepe': 5, 'denim': 6, 'faux_fur': 7, 'faux_leather': 8, 'flannel': 9, 'fleece': 10, 'gingham': 11, 'jersey': 12, 'knit': 13, 'lace': 14, 'lawn': 15, 'neoprene': 16, 'organza': 17, 'plush': 18, 'satin': 19, 'serge': 20, 'taffeta': 21, 'tulle': 22, 'tweed': 23, 'twill': 24, 'velvet': 25, 'vinyl': 26}.items()}
+labels = {v: k for k, v in {'canvas': 0, 'chambray': 1, 'chenille': 2, 'chiffon': 3, 'corduroy': 4, 'crepe': 5, 'denim': 6, 'faux_fur': 7, 'faux_leather': 8, 'flannel': 9, 'fleece': 10, 'gingham': 11,
+                            'jersey': 12, 'knit': 13, 'lace': 14, 'lawn': 15, 'neoprene': 16, 'organza': 17, 'plush': 18, 'satin': 19, 'serge': 20, 'taffeta': 21, 'tulle': 22, 'tweed': 23, 'twill': 24, 'velvet': 25, 'vinyl': 26}.items()}
 
 # Load the ViT model
 model_path = "/Users/lifanlin/final year project/eco-textile-app/model/TextileNet-fabric/vits_ckpt.pth"
@@ -61,6 +62,7 @@ model.load_state_dict(state_dict, strict=False)
 model.eval()
 print("Vision Transformer model loaded successfully!")
 
+
 @app.post("/predict")
 async def predict(image: UploadFile = File(...)):
     """
@@ -69,7 +71,8 @@ async def predict(image: UploadFile = File(...)):
     try:
         # Ensure the uploaded file is an image
         if not image.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
+            raise HTTPException(
+                status_code=400, detail="Invalid file type. Please upload an image.")
 
         # Open and preprocess the image
         img = Image.open(image.file).convert("RGB")
@@ -90,50 +93,62 @@ async def predict(image: UploadFile = File(...)):
 # ------------------------
 # Credentials
 # ------------------------
+
+
 class SignUpRequest(BaseModel):
     username: str
     password: str
+
 
 @app.post("/signup")
 async def signup(request: SignUpRequest):
     try:
         # Check if the username already exists
-        cursor.execute("SELECT COUNT(*) FROM user WHERE username = ?", (request.username,))
+        cursor.execute(
+            "SELECT COUNT(*) FROM user WHERE username = ?", (request.username,))
         if cursor.fetchone()[0] > 0:
-            raise HTTPException(status_code=400, detail="Username already exists")
-        
+            raise HTTPException(
+                status_code=400, detail="Username already exists")
+
         # Insert new user securely with parameterized queries
-        cursor.execute("INSERT INTO user (username, password) VALUES (?, ?)", (request.username, request.password))
+        cursor.execute("INSERT INTO user (username, password) VALUES (?, ?)",
+                       (request.username, request.password))
         database.commit()
 
         # Retrieve the newly inserted user ID
-        cursor.execute("SELECT id FROM user WHERE username = ?", (request.username,))
+        cursor.execute("SELECT id FROM user WHERE username = ?",
+                       (request.username,))
         user_id = cursor.fetchone()[0]
 
         return {"successful": True, "response": "Successfully signed up", "userID": user_id}
-    
+
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")
-    
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str
+
 
 @app.post("/login")
 async def login(request: LoginRequest):
     try:
         # Fetch the password for the given username securely using parameterized query
-        cursor.execute("SELECT id, password FROM user WHERE username = ?", (request.username,))
+        cursor.execute(
+            "SELECT id, password FROM user WHERE username = ?", (request.username,))
         user = cursor.fetchone()
 
         # Check if user exists and the password matches
         if not user or request.password != user[1]:
-            raise HTTPException(status_code=400, detail="Wrong username or password")
+            raise HTTPException(
+                status_code=400, detail="Wrong username or password")
 
         # Retrieve user ID, user conversations and respond
         user_id = user[0]
-        cursor.execute("SELECT id, title FROM conversation WHERE userId = ?", (user_id,))
+        cursor.execute(
+            "SELECT id, title FROM conversation WHERE userId = ?", (user_id,))
         return {"successful": True, "response": "Successfully logged in", "userID": user_id}
 
     except Exception as e:
@@ -148,65 +163,80 @@ class CreateConversationRequest(BaseModel):
     userID: str
     title: str
 
+
 @app.post("/createConversation")
 async def create_conversation(request: CreateConversationRequest):
     try:
         # Check if the conversation already exists for current user
-        cursor.execute("SELECT COUNT(*) FROM conversation WHERE userId = ? AND title = ?", (request.userID, request.title))
+        cursor.execute("SELECT COUNT(*) FROM conversation WHERE userId = ? AND title = ?",
+                       (request.userID, request.title))
         if cursor.fetchone()[0] > 0:
-            raise HTTPException(status_code=400, detail="Duplicated conversation title")
-        
+            raise HTTPException(
+                status_code=400, detail="Duplicated conversation title")
+
         # Insert new conversation securely with parameterized queries
-        cursor.execute("INSERT INTO conversation (userId, title) VALUES (?, ?)", (request.userID, request.title))
+        cursor.execute("INSERT INTO conversation (userId, title) VALUES (?, ?)",
+                       (request.userID, request.title))
         database.commit()
 
         # Retrieve the newly inserted conversation ID
-        cursor.execute("SELECT id FROM conversation WHERE userID = ? AND title = ?", (request.userID, request.title))
+        cursor.execute("SELECT id FROM conversation WHERE userID = ? AND title = ?",
+                       (request.userID, request.title))
         conversation_id = cursor.fetchone()[0]
 
         return {"successful": True, "response": "Successfully create conversation", "conversationId": conversation_id}
-    
+
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")
-    
+
+
 class GetConversationsRequest(BaseModel):
     userID: str
+
 
 @app.post("/getConversations")
 async def get_conversations(request: GetConversationsRequest):
     try:
         # Retrieve conversations for the given userID
-        cursor.execute("SELECT id, title FROM conversation WHERE userId = ?", (request.userID,))
+        cursor.execute(
+            "SELECT id, title FROM conversation WHERE userId = ?", (request.userID,))
         conversations = cursor.fetchall()
 
         # Format the result into a list of dictionaries
-        conversation_list = [{"id": row[0], "title": row[1]} for row in conversations]
+        conversation_list = [{"id": row[0], "title": row[1]}
+                             for row in conversations]
 
         return {"conversations": conversation_list}
 
     except Exception as e:
         print(f"Error fetching conversations: {e}")
-        raise HTTPException(status_code=500, detail="Could not fetch conversations")
+        raise HTTPException(
+            status_code=500, detail="Could not fetch conversations")
+
 
 class DeleteConversationRequest(BaseModel):
     userID: str
     conversationID: str
 
+
 @app.post("/deleteConversation")
 async def delete_conversation(request: DeleteConversationRequest):
     try:
         # Check if the conversation exists and belongs to the user
-        cursor.execute("SELECT COUNT(*) FROM conversation WHERE id = ? AND userId = ?", (request.conversationID, request.userID))
+        cursor.execute("SELECT COUNT(*) FROM conversation WHERE id = ? AND userId = ?",
+                       (request.conversationID, request.userID))
         if cursor.fetchone()[0] == 0:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+            raise HTTPException(
+                status_code=404, detail="Conversation not found")
 
         # Delete conversation securely
-        cursor.execute("DELETE FROM conversation WHERE id = ? AND userId = ?", (request.conversationID, request.userID))
+        cursor.execute("DELETE FROM conversation WHERE id = ? AND userId = ?",
+                       (request.conversationID, request.userID))
         database.commit()
 
         return {"successful": True, "response": "Successfully deleted conversation"}
-    
+
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise HTTPException(status_code=500, detail="Unexpected server error")
@@ -214,24 +244,33 @@ async def delete_conversation(request: DeleteConversationRequest):
 # ----------------------------------
 # Conversation Messages Management
 # ----------------------------------
+
+
 class AskRequest(BaseModel):
     query: str
     conversationID: int
     textile: str = None
 
+
 @app.post("/ask")
 async def ask_question(request: AskRequest):
     try:
-        # Combine the user's query with the prediction result
-        modified_query = (
-            f"{request.textile}"
-            f"Based on the provided query, provide practical suggestions. "
-            f"Include eco-friendly options while considering durability, affordability, ease of use, and user preferences. "
-            f"Address alternatives, laundering methods, recycling options, upcycling ideas, and disposal practices. "
-            f"Here is the user's query: {request.query}"
-        )
+        # Fetch conversation history
+        cursor.execute("""
+            SELECT message, isUser FROM message
+            WHERE conversationId = ?
+            ORDER BY timestamp ASC
+        """, (request.conversationID,))
+        conversation_history = cursor.fetchall()
 
-        print(modified_query)
+        # Prepare message history for OpenAI
+        messages = [
+            {"role": "user" if is_user else "assistant", "content": message}
+            for message, is_user in conversation_history
+        ]
+
+        # Add the new user message
+        messages.append({"role": "user", "content": request.query})
 
         # Save the user's message (and image path) into the database
         cursor.execute("""
@@ -240,13 +279,18 @@ async def ask_question(request: AskRequest):
         """, (request.conversationID, True, None, request.query))
         database.commit()
 
+        # Combine the user's query with the prediction result
+        modified_query = (
+            f"The identified textile from the image is {request.textile}. If it's empty, it means the user did not upload an image. "
+            f"Respond specifically to the user's query without unnecessary details. "
+            f"Focus on providing practical suggestions that directly address the user's request. "
+            f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
+            f"Here is the user's query: {request.query}"
+        )
+
         # Get response from the LLM
         chat_completion = client.chat.completions.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": modified_query},
-            ],
+            messages=messages,
             model="gpt-4o-mini",
         )
         generated_text = chat_completion.choices[0].message.content
@@ -262,11 +306,13 @@ async def ask_question(request: AskRequest):
 
     except Exception as e:
         print(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected error: {str(e)}")
 
-    
+
 class GetMessagesRequest(BaseModel):
     conversationId: int
+
 
 @app.post("/getMessages")
 async def get_messages(request: GetMessagesRequest):
