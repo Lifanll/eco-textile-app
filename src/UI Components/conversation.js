@@ -35,7 +35,7 @@ function Conversation() {
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ conversationId }),
+                    body: JSON.stringify({ conversationId: parseInt(conversationId) }),
                 });
 
                 const data = await response.json();
@@ -57,8 +57,9 @@ function Conversation() {
         setLoading(true);
 
         try {
-            // Save the image locally if one is uploaded
             let textile = "";
+            let imagePath = "";
+
             if (uploadedImage) {
                 const formData = new FormData();
                 formData.append("image", uploadedImage);
@@ -73,10 +74,10 @@ function Conversation() {
                 }
 
                 const predictionResult = await imageResponse.json();
-                textile = predictionResult.prediction; // Get the predicted class or image path
+                textile = predictionResult.prediction; // Get the predicted class
+                imagePath = predictionResult.image_path; // Get the saved image path
             }
 
-            // Send the message and image path to the backend
             const response = await fetch("http://127.0.0.1:8000/ask", {
                 method: "POST",
                 headers: {
@@ -84,8 +85,9 @@ function Conversation() {
                 },
                 body: JSON.stringify({
                     query: newMessage,
-                    conversationID: conversationId,
+                    conversationID: parseInt(conversationId),
                     textile,
+                    imagePath,
                 }),
             });
 
@@ -98,11 +100,10 @@ function Conversation() {
             // Update messages with user message and LLM response
             setMessages((prevMessages) => [
                 ...prevMessages,
-                ...(newMessage ? [{ isUser: true, message: newMessage }] : []),
-                { isUser: false, message: data.response },
+                ...(newMessage ? [{ isUser: true, message: newMessage, image: imagePath }] : []),
+                { isUser: false, message: data.response, image: null },
             ]);
 
-            // Clear input and image state
             setNewMessage("");
             setUploadedImage(null);
         } catch (error) {
@@ -163,32 +164,53 @@ function Conversation() {
                                 <ListItem
                                     sx={{
                                         justifyContent: msg.isUser ? "flex-end" : "flex-start",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: msg.isUser ? "flex-end" : "flex-start",
                                     }}
                                 >
-                                    <Box
-                                        sx={{
-                                            textAlign: msg.isUser ? "right" : "left",
-                                            backgroundColor: msg.isUser
-                                                ? "rgba(33, 150, 243, 0.1)"
-                                                : "rgba(0, 0, 0, 0.05)",
-                                            borderRadius: "12px",
-                                            padding: "8px 16px",
-                                            maxWidth: "75%",
-                                        }}
-                                    >
-                                        <ReactMarkdown
-                                            children={msg.message}
-                                            remarkPlugins={[remarkGfm]}
+                                    {/* Display Image if Present */}
+                                    {msg.image && (
+                                        <img
+                                            src={`http://127.0.0.1:8000/${msg.image}`}
+                                            alt="Uploaded"
+                                            style={{
+                                                maxWidth: "100%",
+                                                maxHeight: "150px",
+                                                borderRadius: "8px",
+                                                marginBottom: "5px",
+                                            }}
                                         />
-                                    </Box>
+                                    )}
+
+                                    {/* Display Text Message */}
+                                    {msg.message && (
+                                        <Box
+                                            sx={{
+                                                textAlign: msg.isUser ? "right" : "left",
+                                                backgroundColor: msg.isUser
+                                                    ? "rgba(33, 150, 243, 0.1)"
+                                                    : "rgba(0, 0, 0, 0.05)",
+                                                borderRadius: "12px",
+                                                padding: "8px 16px",
+                                                maxWidth: "75%",
+                                            }}
+                                        >
+                                            <ReactMarkdown
+                                                children={msg.message}
+                                                remarkPlugins={[remarkGfm]}
+                                            />
+                                        </Box>
+                                    )}
                                 </ListItem>
                                 <Divider variant="inset" component="li" />
                             </React.Fragment>
                         ))}
                     </List>
+
                 </Paper>
 
-                {/* Uploaded Image */}
+                {/* Uploaded Image Preview */}
                 {uploadedImage && (
                     <Box
                         sx={{

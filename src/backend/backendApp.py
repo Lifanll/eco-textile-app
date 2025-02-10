@@ -2,17 +2,19 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 from pydantic import BaseModel
-import torch
 from PIL import Image
+import torch
 from transformers import AutoImageProcessor, AutoModelForImageClassification
+from torchvision import models
 from fastapi import FastAPI, HTTPException
 import numpy as np
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from typing import List
 import sqlite3
 from uuid import uuid4
+import faiss
+from sentence_transformers import SentenceTransformer
 import os
+from fastapi.staticfiles import StaticFiles
 
 # init ai
 openai_api_key = "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"
@@ -24,8 +26,32 @@ client = OpenAI(
 database = sqlite3.connect('my_database.db')
 cursor = database.cursor()
 
+embedder = SentenceTransformer('all-MiniLM-L6-v2')
+
+# Preprocess knowledge base embeddings
+knowledge_base = [
+    "Organic cotton reduces water consumption compared to conventional cotton.",
+    "Recycled polyester reduces carbon emissions significantly.",
+    "Bamboo fabric is biodegradable and requires less water to grow.",
+    "Wool is naturally antimicrobial and doesn't require frequent washing.",
+    "Upcycling old denim reduces textile waste in landfills."
+]
+
+# Generate embeddings for knowledge base
+kb_embeddings = embedder.encode(knowledge_base)
+
+# Build FAISS index
+index = faiss.IndexFlatL2(kb_embeddings.shape[1])
+index.add(np.array(kb_embeddings))
+
 # Initialize FastAPI app
 app = FastAPI()
+
+# Ensure the 'images' directory exists
+os.makedirs("images", exist_ok=True)
+
+# Mount the 'images' directory so it can be served as static files
+app.mount("/images", StaticFiles(directory="images"), name="images")
 
 # Add CORS middleware
 app.add_middleware(
@@ -38,29 +64,51 @@ app.add_middleware(
 
 
 # Define label mapping
-labels = {v: k for k, v in {'canvas': 0, 'chambray': 1, 'chenille': 2, 'chiffon': 3, 'corduroy': 4, 'crepe': 5, 'denim': 6, 'faux_fur': 7, 'faux_leather': 8, 'flannel': 9, 'fleece': 10, 'gingham': 11,
-                            'jersey': 12, 'knit': 13, 'lace': 14, 'lawn': 15, 'neoprene': 16, 'organza': 17, 'plush': 18, 'satin': 19, 'serge': 20, 'taffeta': 21, 'tulle': 22, 'tweed': 23, 'twill': 24, 'velvet': 25, 'vinyl': 26}.items()}
+labels = {v: k for k, v in {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16, 'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}.items()}
 
-# Load the ViT model
-model_path = "/Users/lifanlin/final year project/eco-textile-app/model/TextileNet-fabric/vits_ckpt.pth"
-num_classes = 27  # Adjust based on your use case
 
-# Use a pre-trained ViT model as the base
+
+# Paths to the saved model checkpoints
+model1_path = "/Users/lifanlin/final year project/eco-textile-app/model/TextileNet-fibre/vits_ckpt.pth"
+model2_path = "/Users/lifanlin/final year project/eco-textile-app/model/TextileNet-fibre/res18_ckpt.pth"
+num_classes = 33  # Number of classes
+
+# Initialize the processor (for ViT)
 processor = AutoImageProcessor.from_pretrained("google/vit-base-patch16-224")
-model = AutoModelForImageClassification.from_pretrained(
+
+# ------------------------
+# Model 1: Vision Transformer (ViT)
+# ------------------------
+model1 = AutoModelForImageClassification.from_pretrained(
     "google/vit-base-patch16-224",
     num_labels=num_classes,
-    ignore_mismatched_sizes=True  # To adapt the model for your dataset
+    ignore_mismatched_sizes=True
 )
 
-# Load the checkpoint weights
-checkpoint = torch.load(model_path, map_location=torch.device('cpu'))
-state_dict = checkpoint["model"] if "model" in checkpoint else checkpoint["state_dict"]
-model.load_state_dict(state_dict, strict=False)
+# Load checkpoint for ViT
+checkpoint1 = torch.load(model1_path, map_location=torch.device('cpu'))
+state_dict1 = checkpoint1.get("model", checkpoint1.get("state_dict"))
+model1.load_state_dict(state_dict1, strict=False)
 
-# Set the model to evaluation mode
-model.eval()
+# Set model to evaluation mode
+model1.eval()
 print("Vision Transformer model loaded successfully!")
+
+# ------------------------
+# Model 2: ResNet-18
+# ------------------------
+# Load ResNet-18 with the correct number of output classes
+model2 = models.resnet18(pretrained=False)
+model2.fc = torch.nn.Linear(model2.fc.in_features, num_classes)
+
+# Load checkpoint for ResNet-18
+checkpoint2 = torch.load(model2_path, map_location=torch.device('cpu'))
+state_dict2 = checkpoint2.get("model", checkpoint2.get("state_dict"))
+model2.load_state_dict(state_dict2, strict=False)
+
+# Set model to evaluation mode
+model2.eval()
+print("ResNet-18 model loaded successfully!")
 
 
 @app.post("/predict")
@@ -74,17 +122,50 @@ async def predict(image: UploadFile = File(...)):
             raise HTTPException(
                 status_code=400, detail="Invalid file type. Please upload an image.")
 
+
+        # Generate a unique filename for the image
+        image_name = f"{uuid4().hex}_{image.filename}"
+        image_path = os.path.join("images", image_name)
+
+        # Save the image to the server
+        with open(image_path, "wb") as f:
+            while chunk := image.file.read(1024):  
+                f.write(chunk)
+
         # Open and preprocess the image
         img = Image.open(image.file).convert("RGB")
         inputs = processor(images=img, return_tensors="pt")
 
-        # Perform prediction
         with torch.no_grad():
-            outputs = model(**inputs)
-            predicted_class = torch.argmax(outputs.logits, dim=-1).item()
+            # Get logits from both models
+            logits_vit = model1(**inputs).logits
+            logits_resnet = model2(inputs['pixel_values'].squeeze(0).unsqueeze(0))  # ResNet expects [B, C, H, W]
 
-        # Return the prediction
-        return {"prediction": labels[predicted_class]}
+            # Apply softmax to get probabilities
+            probs_vit = torch.nn.functional.softmax(logits_vit, dim=-1)
+            probs_resnet = torch.nn.functional.softmax(logits_resnet, dim=-1)
+
+            # Get top-5 predictions from each model
+            top5_probs_vit, top5_indices_vit = torch.topk(probs_vit, k=5, dim=-1)
+            top5_probs_resnet, top5_indices_resnet = torch.topk(probs_resnet, k=5, dim=-1)
+
+            # Combine predictions from both models
+            combined_probs = {}
+
+            # Add ViT top-5 results
+            for idx, prob in zip(top5_indices_vit[0], top5_probs_vit[0]):
+                label = labels[idx.item()]
+                combined_probs[label] = combined_probs.get(label, 0) + prob.item()
+
+            # Add ResNet top-5 results
+            for idx, prob in zip(top5_indices_resnet[0], top5_probs_resnet[0]):
+                label = labels[idx.item()]
+                combined_probs[label] = combined_probs.get(label, 0) + prob.item()
+
+            # Get the label with the highest combined probability
+            best_label = max(combined_probs, key=combined_probs.get)
+
+        return {"prediction": best_label, "image_path": image_path}
 
     except Exception as e:
         print(f"Error during prediction: {str(e)}")  # Log the error
@@ -250,6 +331,7 @@ class AskRequest(BaseModel):
     query: str
     conversationID: int
     textile: str = None
+    imagePath: str = None
 
 
 @app.post("/ask")
@@ -269,24 +351,32 @@ async def ask_question(request: AskRequest):
             for message, is_user in conversation_history
         ]
 
+        # Retrieve relevant knowledge from the knowledge base
+        query_embedding = embedder.encode([request.query])
+        D, I = index.search(query_embedding, k=3)  # Top-3 relevant facts
+
+        # Combine retrieved knowledge
+        retrieved_facts = "\n".join([knowledge_base[i] for i in I[0]])
+
+        # Combine the user's query with the prediction result
+        modified_query = (
+            f"The identified textile from the image is {request.textile}. If it's empty, it means the user did not upload an image. "
+            f"\nRelevant facts: {retrieved_facts}\n"
+            f"Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation. "
+            f"Focus on providing practical suggestions that directly address the user's request. "
+            f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
+            f"Here is the user's query: {request.query}"
+        )
+
         # Add the new user message
-        messages.append({"role": "user", "content": request.query})
+        messages.append({"role": "user", "content": modified_query})
 
         # Save the user's message (and image path) into the database
         cursor.execute("""
             INSERT INTO message (conversationId, isUser, image, message) 
             VALUES (?, ?, ?, ?)
-        """, (request.conversationID, True, None, request.query))
+        """, (request.conversationID, True, request.imagePath, request.query))
         database.commit()
-
-        # Combine the user's query with the prediction result
-        modified_query = (
-            f"The identified textile from the image is {request.textile}. If it's empty, it means the user did not upload an image. "
-            f"Respond specifically to the user's query without unnecessary details. "
-            f"Focus on providing practical suggestions that directly address the user's request. "
-            f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
-            f"Here is the user's query: {request.query}"
-        )
 
         # Get response from the LLM
         chat_completion = client.chat.completions.create(
@@ -313,7 +403,6 @@ async def ask_question(request: AskRequest):
 class GetMessagesRequest(BaseModel):
     conversationId: int
 
-
 @app.post("/getMessages")
 async def get_messages(request: GetMessagesRequest):
     try:
@@ -324,7 +413,19 @@ async def get_messages(request: GetMessagesRequest):
             ORDER BY timestamp ASC
         """, (request.conversationId,))
         messages = cursor.fetchall()
-        return {"messages": [{"message": row[0], "isUser": row[1], "timestamp": row[2]} for row in messages]}
+
+        return {
+            "messages": [
+                {
+                    "message": row[0],
+                    "isUser": row[1],
+                    "image": row[2],
+                    "timestamp": row[3]
+                }
+                for row in messages
+            ]
+        }
+
     except Exception as e:
         print(f"Error fetching messages: {e}")
         raise HTTPException(status_code=500, detail="Error fetching messages")
