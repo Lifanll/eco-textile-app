@@ -15,6 +15,7 @@ import faiss
 from sentence_transformers import SentenceTransformer
 import os
 from fastapi.staticfiles import StaticFiles
+import asyncio
 
 # init ai
 openai_api_key = "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"
@@ -22,8 +23,11 @@ client = OpenAI(
     api_key=openai_api_key,  # This is the default and can be omitted
 )
 
+# prevents tokenizers from running in parallel and causing deadlocks
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 # connect to database
-database = sqlite3.connect('my_database.db')
+database = sqlite3.connect('my_database.db', check_same_thread=False)
 cursor = database.cursor()
 
 embedder = SentenceTransformer('all-MiniLM-L6-v2')
@@ -352,8 +356,11 @@ async def ask_question(request: AskRequest):
         ]
 
         # Retrieve relevant knowledge from the knowledge base
-        query_embedding = embedder.encode([request.query, request.textile])
-        D, I = index.search(query_embedding, k=3)  # Top-3 relevant facts
+        async def async_faiss_search(query_embedding, k=3):
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, index.search, query_embedding, k)
+        query_embedding = embedder.encode([request.query+ ' ' + request.textile])
+        D, I = await async_faiss_search(query_embedding, k=3)  # Top-3 relevant facts
 
         # Combine retrieved knowledge
         retrieved_facts = "\n".join([knowledge_base[i] for i in I[0]])
@@ -365,7 +372,7 @@ async def ask_question(request: AskRequest):
             f"Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation. "
             f"Focus on providing practical suggestions that directly address the user's request. "
             f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
-            f"Give a score in sustainability out of 5 stars (display stars with ★ and ☆ in one new line, no text required to explain how many stars there are) if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given."
+            f"Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given."
             f"Here is the user's query: {request.query}"
         )
         print(modified_query)
