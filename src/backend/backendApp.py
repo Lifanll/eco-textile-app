@@ -29,13 +29,13 @@ cursor = database.cursor()
 embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Preprocess knowledge base embeddings
-knowledge_base = [
-    "Organic cotton reduces water consumption compared to conventional cotton.",
-    "Recycled polyester reduces carbon emissions significantly.",
-    "Bamboo fabric is biodegradable and requires less water to grow.",
-    "Wool is naturally antimicrobial and doesn't require frequent washing.",
-    "Upcycling old denim reduces textile waste in landfills."
-]
+documents = ["knowledge/"+k+".txt" for k,v in {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16, 'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}.items()]
+index = {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16, 'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}
+knowledge_base = []
+for document in documents:
+    f = open(document, "r")
+    knowledge_base.append(f.read())
+    f.close()
 
 # Generate embeddings for knowledge base
 kb_embeddings = embedder.encode(knowledge_base)
@@ -352,7 +352,7 @@ async def ask_question(request: AskRequest):
         ]
 
         # Retrieve relevant knowledge from the knowledge base
-        query_embedding = embedder.encode([request.query])
+        query_embedding = embedder.encode([request.query, request.textile])
         D, I = index.search(query_embedding, k=3)  # Top-3 relevant facts
 
         # Combine retrieved knowledge
@@ -365,8 +365,10 @@ async def ask_question(request: AskRequest):
             f"Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation. "
             f"Focus on providing practical suggestions that directly address the user's request. "
             f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
+            f"Give a score in sustainability out of 5 stars (display stars with ★ and ☆ in one new line, no text required to explain how many stars there are) if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given."
             f"Here is the user's query: {request.query}"
         )
+        print(modified_query)
 
         # Add the new user message
         messages.append({"role": "user", "content": modified_query})
