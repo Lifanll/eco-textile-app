@@ -1,13 +1,14 @@
 fastapi
+uvicorn
 openai
 pydantic
-PIL
+Pillow
 torch
-transformers
 torchvision
+transformers
 numpy
-typing
-sqlite3
-faiss
-sentence_transformers
+sqlite3  # (builtin in Python, no need to install separately)
+faiss-cpu  # Use faiss-gpu if you have CUDA-enabled GPU
+sentence-transformers
+python-multipart
 asyncio
