@@ -16,14 +16,12 @@ from sentence_transformers import SentenceTransformer
 import os
 from fastapi.staticfiles import StaticFiles
 import asyncio
-import base64
 
 # init ai
-openai_api_key = "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"
 GPT_MODEL = "gpt-4o"
 EMBEDDING_MODEL = "text-embedding-3-small"
 client = OpenAI(
-    api_key=openai_api_key,  # This is the default and can be omitted
+    api_key=os.environ["API_KEY"],  # This is the default and can be omitted
 )
 
 # prevents tokenizers from running in parallel and causing deadlocks
