@@ -16,9 +16,12 @@ from sentence_transformers import SentenceTransformer
 import os
 from fastapi.staticfiles import StaticFiles
 import asyncio
+import base64
 
 # init ai
 openai_api_key = "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"
+GPT_MODEL = "gpt-4o"
+EMBEDDING_MODEL = "text-embedding-3-small"
 client = OpenAI(
     api_key=openai_api_key,  # This is the default and can be omitted
 )
@@ -367,18 +370,28 @@ async def ask_question(request: AskRequest):
 
         # Combine the user's query with the prediction result
         modified_query = (
-            f"The identified textile from the image is {request.textile}. If it's empty, it means the user did not upload an image. "
-            f"\nRelevant facts: {retrieved_facts}\n"
+            f"If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}."
+            # f"\nRelevant facts: {retrieved_facts}\n"
             f"Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation. "
             f"Focus on providing practical suggestions that directly address the user's request. "
             f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
             f"Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given."
             f"Here is the user's query: {request.query}"
+            f""
         )
         print(modified_query)
 
-        # Add the new user message
-        messages.append({"role": "user", "content": modified_query})
+        # If an image is uploaded, include it in the request to OpenAI
+        if request.imagePath:
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": request.query},
+                    {"type": "image_url", "image_url": {"url": f"https://eco-textile-app-back-end.onrender.com:8000/{request.imagePath}"}}
+                ]
+            })
+        else:
+            messages.append({"role": "user", "content": request.query})
 
         # Save the user's message (and image path) into the database
         cursor.execute("""
@@ -389,8 +402,9 @@ async def ask_question(request: AskRequest):
 
         # Get response from the LLM
         chat_completion = client.chat.completions.create(
+            temperature=0.4,
             messages=messages,
-            model="gpt-4o-mini",
+            model=GPT_MODEL,
         )
         generated_text = chat_completion.choices[0].message.content
 
