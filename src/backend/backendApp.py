@@ -16,6 +16,7 @@ from sentence_transformers import SentenceTransformer
 import os
 from fastapi.staticfiles import StaticFiles
 import asyncio
+import base64
 
 # init ai
 GPT_MODEL = "gpt-4o"
@@ -381,6 +382,8 @@ async def ask_question(request: AskRequest):
 
         # If an image is uploaded, include it in the request to OpenAI
         if request.imagePath:
+            with open(request.imagePath, "rb") as image_file:
+                base64.b64encode(image_file.read()).decode("utf-8")
             messages.append({
                 "role": "user",
                 "content": [
