@@ -61,7 +61,7 @@ app.mount("/images", StaticFiles(directory="images"), name="images")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Allow React frontend
+    allow_origins=["*"],  # Allow React frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -74,8 +74,8 @@ labels = {v: k for k, v in {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 
 
 
 # Paths to the saved model checkpoints
-model1_path = "/Users/lifanlin/final year project/eco-textile-app/model/TextileNet-fibre/vits_ckpt.pth"
-model2_path = "/Users/lifanlin/final year project/eco-textile-app/model/TextileNet-fibre/res18_ckpt.pth"
+model1_path = "model/TextileNet-fibre/vits_ckpt.pth"
+model2_path = "model/TextileNet-fibre/res18_ckpt.pth"
 num_classes = 33  # Number of classes
 
 # Initialize the processor (for ViT)
