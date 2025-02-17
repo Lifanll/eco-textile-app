@@ -21,7 +21,7 @@ function Login() {
         e.preventDefault();
         setLoading(true);
         try {
-            const response = await fetch("https://eco-textile-app-back-end.onrender.com/login", {
+            const response = await fetch("https://eco-textile-app-backend.onrender.com/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

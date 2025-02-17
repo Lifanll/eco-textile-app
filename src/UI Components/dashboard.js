@@ -39,7 +39,7 @@ function Dashboard() {
 
         const fetchConversations = async () => {
             try {
-                const response = await fetch("https://eco-textile-app-back-end.onrender.com/getConversations", {
+                const response = await fetch("https://eco-textile-app-backend.onrender.com/getConversations", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -74,7 +74,7 @@ function Dashboard() {
         }
 
         try {
-            const response = await fetch("https://eco-textile-app-back-end.onrender.com/createConversation", {
+            const response = await fetch("https://eco-textile-app-backend.onrender.com/createConversation", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

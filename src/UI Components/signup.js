@@ -26,7 +26,7 @@ function SignUp() {
 
         setLoading(true);
         try {
-            const response = await fetch("https://eco-textile-app-back-end.onrender.com/signup", {
+            const response = await fetch("https://eco-textile-app-backend.onrender.com/signup", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
