@@ -1,0 +1,13 @@
+fastapi
+openai
+pydantic
+PIL
+torch
+transformers
+torchvision
+numpy
+typing
+sqlite3
+faiss
+sentence_transformers
+asyncio
