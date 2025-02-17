@@ -19,7 +19,7 @@ function TestApp() {
     formData.append("image", file);
 
     try {
-      const response = await fetch("https://eco-textile-app-backend.onrender.com:8000/predict", {
+      const response = await fetch("https://eco-textile-app-backend.onrender.com/predict", {
         method: "POST",
         body: formData,
       });
@@ -50,7 +50,7 @@ function TestApp() {
 
     setLoading(true);
     try {
-      const response = await fetch("https://eco-textile-app-backend.onrender.com:8000/ask", {
+      const response = await fetch("https://eco-textile-app-backend.onrender.com/ask", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

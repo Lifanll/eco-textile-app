@@ -30,7 +30,7 @@ function Conversation() {
     useEffect(() => {
         const fetchMessages = async () => {
             try {
-                const response = await fetch("https://eco-textile-app-backend.onrender.com:8000/getMessages", {
+                const response = await fetch("https://eco-textile-app-backend.onrender.com/getMessages", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -64,7 +64,7 @@ function Conversation() {
                 const formData = new FormData();
                 formData.append("image", uploadedImage);
 
-                const imageResponse = await fetch("https://eco-textile-app-backend.onrender.com:8000/predict", {
+                const imageResponse = await fetch("https://eco-textile-app-backend.onrender.com/predict", {
                     method: "POST",
                     body: formData,
                 });
@@ -78,7 +78,7 @@ function Conversation() {
                 imagePath = predictionResult.image_path; // Get the saved image path
             }
 
-            const response = await fetch("https://eco-textile-app-backend.onrender.com:8000/ask", {
+            const response = await fetch("https://eco-textile-app-backend.onrender.com/ask", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
