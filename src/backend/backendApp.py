@@ -34,20 +34,20 @@ cursor = database.cursor()
 embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Preprocess knowledge base embeddings
-documents = ["knowledge/"+k+".txt" for k,v in {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16, 'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}.items()]
-index = {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16, 'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}
-knowledge_base = []
-for document in documents:
-    f = open(document, "r")
-    knowledge_base.append(f.read())
-    f.close()
+# documents = ["knowledge/"+k+".txt" for k,v in {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16, 'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}.items()]
+# index = {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16, 'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}
+# knowledge_base = []
+# for document in documents:
+#     f = open(document, "r")
+#     knowledge_base.append(f.read())
+#     f.close()
 
 # Generate embeddings for knowledge base
-kb_embeddings = embedder.encode(knowledge_base)
+# kb_embeddings = embedder.encode(knowledge_base)
 
-# Build FAISS index
-index = faiss.IndexFlatL2(kb_embeddings.shape[1])
-index.add(np.array(kb_embeddings))
+# # Build FAISS index
+# index = faiss.IndexFlatL2(kb_embeddings.shape[1])
+# index.add(np.array(kb_embeddings))
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -356,15 +356,15 @@ async def ask_question(request: AskRequest):
             for message, is_user in conversation_history
         ]
 
-        # Retrieve relevant knowledge from the knowledge base
-        async def async_faiss_search(query_embedding, k=3):
-            loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(None, index.search, query_embedding, k)
-        query_embedding = embedder.encode([request.query+ ' ' + request.textile])
-        D, I = await async_faiss_search(query_embedding, k=3)  # Top-3 relevant facts
+        # # Retrieve relevant knowledge from the knowledge base
+        # async def async_faiss_search(query_embedding, k=3):
+        #     loop = asyncio.get_running_loop()
+        #     return await loop.run_in_executor(None, index.search, query_embedding, k)
+        # query_embedding = embedder.encode([request.query+ ' ' + request.textile])
+        # D, I = await async_faiss_search(query_embedding, k=3)  # Top-3 relevant facts
 
-        # Combine retrieved knowledge
-        retrieved_facts = "\n".join([knowledge_base[i] for i in I[0]])
+        # # Combine retrieved knowledge
+        # retrieved_facts = "\n".join([knowledge_base[i] for i in I[0]])
 
         # Combine the user's query with the prediction result
         modified_query = (
