@@ -394,7 +394,7 @@ async def ask_question(request: AskRequest):
                 "role": "user",
                 "content": [
                     {"type": "text", "text": request.query},
-                    {"type": "image_url", "image_url": {"url": f"https://eco-textile-app-backend.onrender.com/images/jpeg;base64,{data_url}"}}
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{data_url}"}}
                 ]
             })
         else:
