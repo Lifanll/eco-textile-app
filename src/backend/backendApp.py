@@ -394,11 +394,13 @@ async def ask_question(request: AskRequest):
         else:
             style_agent_inputs.append({"role": "user", "content": style_agent_query})
 
-        style_agent_response = client.chat.completions.create(
+        style_agent_chat_complete = client.chat.completions.create(
             temperature= 0.7,
             messages=style_agent_inputs,
             model=GPT_MODEL,
         )
+
+        style_agent_response = style_agent_chat_complete.choices[0].message.content
 
         print("\n\n\n" + style_agent_response + "\n\n\n")
 
@@ -427,11 +429,13 @@ async def ask_question(request: AskRequest):
         else:
             sustain_agent_inputs.append({"role": "user", "content": sustain_agent_query})
 
-        sustain_agent_response = client.chat.completions.create(
+        sustain_agent_chat_complete = client.chat.completions.create(
             temperature= 0.4,
             messages=messages,
             model=GPT_MODEL,
         )
+
+        sustain_agent_response = sustain_agent_chat_complete.choices[0].message.content
 
         print("\n\n\n" + sustain_agent_response + "\n\n\n")
 
@@ -445,6 +449,9 @@ async def ask_question(request: AskRequest):
 
         Sustainablitity agent:
         {sustain_agent_response}.
+
+        Decide what to including and the propotion by the user's query:
+        {request.query}
         """
 
         # If an image is uploaded, include it in the request to OpenAI
