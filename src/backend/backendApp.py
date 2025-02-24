@@ -70,8 +70,8 @@ app.add_middleware(
 
 
 # Define label mapping
-labels = {v: k for k, v in {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16, 'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}.items()}
-
+labels = {v: k for k, v in {'abaca': 0, 'acrylic': 1, 'alpaca': 2, 'angora': 3, 'aramid': 4, 'camel': 5, 'cashmere': 6, 'cotton': 7, 'cupro': 8, 'elastane_spandex': 9, 'flax_linen': 10, 'fur': 11, 'hemp': 12, 'horse_hair': 13, 'jute': 14, 'leather': 15, 'llama': 16,
+                            'lyocell': 17, 'milk_fiber': 18, 'modal': 19, 'mohair': 20, 'nylon': 21, 'polyester': 22, 'polyolefin': 23, 'ramie': 24, 'silk': 25, 'sisal': 26, 'soybean_fiber': 27, 'suede': 28, 'triacetate_acetate': 29, 'viscose_rayon': 30, 'wool': 31, 'yak': 32}.items()}
 
 
 # Paths to the saved model checkpoints
@@ -128,14 +128,13 @@ async def predict(image: UploadFile = File(...)):
             raise HTTPException(
                 status_code=400, detail="Invalid file type. Please upload an image.")
 
-
         # Generate a unique filename for the image
         image_name = f"{uuid4().hex}_{image.filename}"
         image_path = os.path.join("images", image_name)
 
         # Save the image to the server
         with open(image_path, "wb") as f:
-            while chunk := image.file.read(1024):  
+            while chunk := image.file.read(1024):
                 f.write(chunk)
 
         # Open and preprocess the image
@@ -145,15 +144,18 @@ async def predict(image: UploadFile = File(...)):
         with torch.no_grad():
             # Get logits from both models
             logits_vit = model1(**inputs).logits
-            logits_resnet = model2(inputs['pixel_values'].squeeze(0).unsqueeze(0))  # ResNet expects [B, C, H, W]
+            logits_resnet = model2(inputs['pixel_values'].squeeze(
+                0).unsqueeze(0))  # ResNet expects [B, C, H, W]
 
             # Apply softmax to get probabilities
             probs_vit = torch.nn.functional.softmax(logits_vit, dim=-1)
             probs_resnet = torch.nn.functional.softmax(logits_resnet, dim=-1)
 
             # Get top-5 predictions from each model
-            top5_probs_vit, top5_indices_vit = torch.topk(probs_vit, k=5, dim=-1)
-            top5_probs_resnet, top5_indices_resnet = torch.topk(probs_resnet, k=5, dim=-1)
+            top5_probs_vit, top5_indices_vit = torch.topk(
+                probs_vit, k=5, dim=-1)
+            top5_probs_resnet, top5_indices_resnet = torch.topk(
+                probs_resnet, k=5, dim=-1)
 
             # Combine predictions from both models
             combined_probs = {}
@@ -161,12 +163,14 @@ async def predict(image: UploadFile = File(...)):
             # Add ViT top-5 results
             for idx, prob in zip(top5_indices_vit[0], top5_probs_vit[0]):
                 label = labels[idx.item()]
-                combined_probs[label] = combined_probs.get(label, 0) + prob.item()
+                combined_probs[label] = combined_probs.get(
+                    label, 0) + prob.item()
 
             # Add ResNet top-5 results
             for idx, prob in zip(top5_indices_resnet[0], top5_probs_resnet[0]):
                 label = labels[idx.item()]
-                combined_probs[label] = combined_probs.get(label, 0) + prob.item()
+                combined_probs[label] = combined_probs.get(
+                    label, 0) + prob.item()
 
             # Get the label with the highest combined probability
             best_label = max(combined_probs, key=combined_probs.get)
@@ -357,55 +361,114 @@ async def ask_question(request: AskRequest):
             for message, is_user in conversation_history
         ]
 
-        # # Retrieve relevant knowledge from the knowledge base
-        # async def async_faiss_search(query_embedding, k=3):
-        #     loop = asyncio.get_running_loop()
-        #     return await loop.run_in_executor(None, index.search, query_embedding, k)
-        # query_embedding = embedder.encode([request.query+ ' ' + request.textile])
-        # D, I = await async_faiss_search(query_embedding, k=3)  # Top-3 relevant facts
-
-        # # Combine retrieved knowledge
-        # retrieved_facts = "\n".join([knowledge_base[i] for i in I[0]])
-
-        # Combine the user's query with the prediction result
-
-        # Todo: add multi-agent for style
-
-        # Todo: add another agent focus on textile sustainablity
-
-        # Todo: final agent combine the results from other agents
-
-        modified_query = (
-            f"If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}."
-            # f"\nRelevant facts: {retrieved_facts}\n"
-            f"Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation. "
-            f"Focus on providing practical suggestions that directly address the user's request. "
-            f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
-            f"Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given."
-            f"Here is the user's query: {request.query}"
-        )
-        print(modified_query)
-
-        # If an image is uploaded, include it in the request to OpenAI
-        if request.imagePath:
-            with open(request.imagePath, "rb") as image_file:
-                data_url = base64.b64encode(image_file.read()).decode("utf-8")
-            messages.append({
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": request.query},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{data_url}"}}
-                ]
-            })
-        else:
-            messages.append({"role": "user", "content": request.query})
-
         # Save the user's message (and image path) into the database
         cursor.execute("""
             INSERT INTO message (conversationId, isUser, image, message) 
             VALUES (?, ?, ?, ?)
         """, (request.conversationID, True, request.imagePath, request.query))
         database.commit()
+
+        # Todo: add multi-agent for style
+
+        style_agent_query = f"""
+        You are an expert on fashion design.
+        If image uploaded, identify if they're clothing. If not, give simple answers to say that you don't think it's clothes.
+        Otherwise, give a type for this in terms of style, along with some suggestions for outfit.
+        Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
+        Here is the user's query: {request.query}
+        """
+
+        # If an image is uploaded, include it in the request to OpenAI
+        if request.imagePath:
+            with open(request.imagePath, "rb") as image_file:
+                data_url = base64.b64encode(image_file.read()).decode("utf-8")
+            style_agent_inputs = messages
+            style_agent_inputs.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": style_agent_query},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{data_url}"}}
+                ]
+            })
+        else:
+            style_agent_inputs.append({"role": "user", "content": style_agent_query})
+
+        style_agent_response = client.chat.completions.create(
+            temperature= 0.7,
+            messages=style_agent_inputs,
+            model=GPT_MODEL,
+        )
+
+        print("\n\n\n" + style_agent_response + "\n\n\n")
+
+        # Todo: add another agent focus on textile sustainablity
+
+        sustain_agent_query = f"""
+        If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}.
+        Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
+        Focus on providing practical suggestions that directly address the user's request.
+        Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question.
+        Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given.
+        Here is the user's query: {request.query}
+        """     
+
+        # If an image is uploaded, include it in the request to OpenAI
+        if request.imagePath:
+            sustain_agent_inputs = messages
+            sustain_agent_inputs.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": sustain_agent_query},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{data_url}"}}
+                ]
+            })
+        else:
+            sustain_agent_inputs.append({"role": "user", "content": sustain_agent_query})
+
+        sustain_agent_response = client.chat.completions.create(
+            temperature= 0.4,
+            messages=messages,
+            model=GPT_MODEL,
+        )
+
+        print("\n\n\n" + sustain_agent_response + "\n\n\n")
+
+        # Todo: final agent combine the results from other agents
+
+        final_agent_query = f"""
+        Your job is to conclude content from other two agents. Here are the response from the other two agent:
+        Style agent:
+        {style_agent_response}.
+
+
+        Sustainablitity agent:
+        {sustain_agent_response}.
+        """
+
+        # If an image is uploaded, include it in the request to OpenAI
+        if request.imagePath:
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": sustain_agent_query},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{data_url}"}}
+                ]
+            })
+        else:
+            messages.append({"role": "user", "content": sustain_agent_query})
+
+        # modified_query = (
+        #     f"If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}."
+        #     f"Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation. "
+        #     f"Focus on providing practical suggestions that directly address the user's request. "
+        #     f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
+        #     f"Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given."
+        #     f"Here is the user's query: {request.query}"
+        # )
+
 
         # Get response from the LLM
         chat_completion = client.chat.completions.create(
@@ -432,6 +495,7 @@ async def ask_question(request: AskRequest):
 
 class GetMessagesRequest(BaseModel):
     conversationId: int
+
 
 @app.post("/getMessages")
 async def get_messages(request: GetMessagesRequest):
