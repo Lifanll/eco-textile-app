@@ -368,6 +368,13 @@ async def ask_question(request: AskRequest):
         # retrieved_facts = "\n".join([knowledge_base[i] for i in I[0]])
 
         # Combine the user's query with the prediction result
+
+        # Todo: add multi-agent for style
+
+        # Todo: add another agent focus on textile sustainablity
+
+        # Todo: final agent combine the results from other agents
+
         modified_query = (
             f"If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}."
             # f"\nRelevant facts: {retrieved_facts}\n"
@@ -376,19 +383,18 @@ async def ask_question(request: AskRequest):
             f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
             f"Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given."
             f"Here is the user's query: {request.query}"
-            f""
         )
         print(modified_query)
 
         # If an image is uploaded, include it in the request to OpenAI
         if request.imagePath:
             with open(request.imagePath, "rb") as image_file:
-                base64.b64encode(image_file.read()).decode("utf-8")
+                data_url = base64.b64encode(image_file.read()).decode("utf-8")
             messages.append({
                 "role": "user",
                 "content": [
                     {"type": "text", "text": request.query},
-                    {"type": "image_url", "image_url": {"url": f"https://eco-textile-app-backend.onrender.com/{request.imagePath}"}}
+                    {"type": "image_url", "image_url": {"url": f"https://eco-textile-app-backend.onrender.com/images/jpeg;base64,{data_url}"}}
                 ]
             })
         else:
