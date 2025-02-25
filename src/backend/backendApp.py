@@ -459,13 +459,13 @@ async def ask_question(request: AskRequest):
             messages.append({
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": sustain_agent_query},
+                    {"type": "text", "text": final_agent_query},
                     {"type": "image_url", "image_url": {
                         "url": f"data:image/jpeg;base64,{data_url}"}}
                 ]
             })
         else:
-            messages.append({"role": "user", "content": sustain_agent_query})
+            messages.append({"role": "user", "content": final_agent_query})
 
         # modified_query = (
         #     f"If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}."
