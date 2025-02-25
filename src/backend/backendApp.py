@@ -392,6 +392,7 @@ async def ask_question(request: AskRequest):
                 ]
             })
         else:
+            style_agent_inputs = messages
             style_agent_inputs.append({"role": "user", "content": style_agent_query})
 
         style_agent_chat_complete = client.chat.completions.create(
@@ -427,6 +428,7 @@ async def ask_question(request: AskRequest):
                 ]
             })
         else:
+            sustain_agent_inputs = messages
             sustain_agent_inputs.append({"role": "user", "content": sustain_agent_query})
 
         sustain_agent_chat_complete = client.chat.completions.create(
