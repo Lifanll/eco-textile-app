@@ -476,7 +476,10 @@ async def ask_question(request: AskRequest):
         # Todo: final agent combine the results from other agents
 
         final_agent_query = f"""
-        Your job is to conclude content from other two agents. Here are the response from the other two agent:
+        Your job is to conclude content from other three agents.
+        Aim to make conversational response.
+        Exclude or cut down some responses from agents if it's not relevant to user's query.
+        Here are the response from the other three agent:
         Style agent:
         {style_agent_response}.
 
