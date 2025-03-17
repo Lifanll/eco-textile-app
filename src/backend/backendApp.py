@@ -439,7 +439,39 @@ async def ask_question(request: AskRequest):
 
         sustain_agent_response = sustain_agent_chat_complete.choices[0].message.content
 
-        print("\n\n\n" + sustain_agent_response + "\n\n\n")
+        # recycling agent
+
+        recycle_agent_query = f"""
+        You are a Recycling Expert specializing in textile waste reduction.  
+        Provide clear and actionable guidance on how users can **recycle or upcycle fabrics**.  
+        If recycling options are unavailable, suggest **eco-friendly disposal alternatives**.
+        Here is the user's query: {request.query}
+        """     
+
+        # If an image is uploaded, include it in the request to OpenAI
+        if request.imagePath:
+            recycle_agent_inputs = messages
+            recycle_agent_inputs.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": recycle_agent_query},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{data_url}"}}
+                ]
+            })
+        else:
+            recycle_agent_inputs = messages
+            recycle_agent_inputs.append({"role": "user", "content": recycle_agent_query})
+
+        recycle_agent_chat_complete = client.chat.completions.create(
+            temperature= 0.4,
+            messages=messages,
+            model=GPT_MODEL,
+        )
+
+        recycle_agent_response = recycle_agent_chat_complete.choices[0].message.content
+
+        print("\n\n\n" + recycle_agent_response + "\n\n\n")
 
         # Todo: final agent combine the results from other agents
 
@@ -448,9 +480,11 @@ async def ask_question(request: AskRequest):
         Style agent:
         {style_agent_response}.
 
-
         Sustainablitity agent:
         {sustain_agent_response}.
+
+        Recycle agent:
+        {recycle_agent_response}
 
         Decide what to including and the propotion by the user's query:
         {request.query}
