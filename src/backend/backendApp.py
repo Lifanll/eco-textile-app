@@ -1,7 +1,7 @@
 import datetime
 from fastapi import Depends, FastAPI, File, Security, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 import jwt
 from openai import OpenAI
 from pydantic import BaseModel
@@ -11,15 +11,11 @@ from transformers import AutoImageProcessor, AutoModelForImageClassification
 from torchvision import models
 from fastapi import FastAPI, HTTPException
 from passlib.context import CryptContext
-import numpy as np
-from typing import List
 import sqlite3
 from uuid import uuid4
-import faiss
 from sentence_transformers import SentenceTransformer
 import os
 from fastapi.staticfiles import StaticFiles
-import asyncio
 import base64
 
 # init ai
