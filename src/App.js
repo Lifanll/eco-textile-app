@@ -18,6 +18,7 @@ import Dashboard from "./UI Components/dashboard";
 import Options from "./UI Components/options";
 import UploadImage from "./UI Components/uploadImage";
 import Conversation from "./UI Components/conversation";
+import jwtDecode from "jwt-decode";
 
 // Helper function to check authentication
 const isAuthenticated = () => {
@@ -25,9 +26,8 @@ const isAuthenticated = () => {
   if (!token) return false;
 
   try {
-    const payload = JSON.parse(atob(token.split(".")[1])); // Decode JWT payload
-    const expirationTime = payload.exp * 1000; // Convert to milliseconds
-    return expirationTime > Date.now(); // Check if token is still valid
+    const decodedToken = jwtDecode(token);
+    return decodedToken.exp * 1000 > Date.now();
   } catch (error) {
     return false; // Invalid token
   }
@@ -41,6 +41,17 @@ const ProtectedRoute = ({ children }) => {
   }
   return children;
 };
+
+// check authentication when the page loads
+useEffect(() => {
+  if (!isAuthenticated()) {
+      alert("Session expired, please log in again.");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("userID");
+      localStorage.removeItem("username");
+      window.location.href = "/";
+  }
+}, []);
 
 
 // Main App Component

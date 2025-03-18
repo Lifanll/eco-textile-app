@@ -66,7 +66,6 @@ function Dashboard() {
 
     // Function to handle new conversation creation
     const handleCreateConversation = async () => {
-        const userID = localStorage.getItem("userID");
 
         if (!newConversationTitle.trim()) {
             alert("Please provide a valid conversation title.");
@@ -94,7 +93,7 @@ function Dashboard() {
             // Add the new conversation to the list
             setConversations((prevConversations) => [
                 ...prevConversations,
-                { id: data.conversationId, title: newConversationTitle },
+                { id: data.conversationID, title: newConversationTitle },
             ]);
 
             // Close dialog and reset input
@@ -107,8 +106,8 @@ function Dashboard() {
     };
 
     // Function to navigate to a conversation
-    const handleOpenConversation = (conversationId) => {
-        navigate(`/conversation/${conversationId}`); // Pass conversationId as a route parameter
+    const handleOpenConversation = (conversationID) => {
+        navigate(`/conversation/${conversationID}`); // Pass conversationID as a route parameter
     };
 
     return (
