@@ -1,5 +1,8 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+import datetime
+from fastapi import Depends, FastAPI, File, Security, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+import jwt
 from openai import OpenAI
 from pydantic import BaseModel
 from PIL import Image
@@ -7,6 +10,7 @@ import torch
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 from torchvision import models
 from fastapi import FastAPI, HTTPException
+from passlib.context import CryptContext
 import numpy as np
 from typing import List
 import sqlite3
@@ -22,8 +26,18 @@ import base64
 GPT_MODEL = "gpt-4o"
 EMBEDDING_MODEL = "text-embedding-3-small"
 client = OpenAI(
-    api_key=os.environ["API_KEY"],  # This is the default and can be omitted
+    api_key=os.environ["API_KEY"],
 )
+
+SECRET_KEY = os.environ["SECRET_KEY"]
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour token expiry
+
+# Password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# OAuth2 for authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # prevents tokenizers from running in parallel and causing deadlocks
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -185,6 +199,32 @@ async def predict(image: UploadFile = File(...)):
 # Credentials
 # ------------------------
 
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(token: str = Security(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("user_id")
+
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        return user_id
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 class SignUpRequest(BaseModel):
     username: str
@@ -200,10 +240,12 @@ async def signup(request: SignUpRequest):
         if cursor.fetchone()[0] > 0:
             raise HTTPException(
                 status_code=400, detail="Username already exists")
+        
+        hashed_password = get_password_hash(request.password)
 
         # Insert new user securely with parameterized queries
         cursor.execute("INSERT INTO user (username, password) VALUES (?, ?)",
-                       (request.username, request.password))
+                       (request.username, hashed_password))
         database.commit()
 
         # Retrieve the newly inserted user ID
@@ -211,7 +253,9 @@ async def signup(request: SignUpRequest):
                        (request.username,))
         user_id = cursor.fetchone()[0]
 
-        return {"successful": True, "response": "Successfully signed up", "userID": user_id}
+        access_token = create_access_token({"user_id": user_id})
+
+        return {"access_token": access_token, "token_type": "bearer"}
 
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -238,9 +282,8 @@ async def login(request: LoginRequest):
 
         # Retrieve user ID, user conversations and respond
         user_id = user[0]
-        cursor.execute(
-            "SELECT id, title FROM conversation WHERE userId = ?", (user_id,))
-        return {"successful": True, "response": "Successfully logged in", "userID": user_id}
+        access_token = create_access_token({"user_id": user_id})
+        return {"access_token": access_token, "token_type": "bearer"}
 
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -250,29 +293,24 @@ async def login(request: LoginRequest):
 # -----------------------------
 # User Conversations Management
 # -----------------------------
-class CreateConversationRequest(BaseModel):
-    userID: str
-    title: str
-
-
 @app.post("/createConversation")
-async def create_conversation(request: CreateConversationRequest):
+async def create_conversation(title: str, user_id: int = Depends(get_current_user)):
     try:
         # Check if the conversation already exists for current user
         cursor.execute("SELECT COUNT(*) FROM conversation WHERE userId = ? AND title = ?",
-                       (request.userID, request.title))
+                       (user_id, title))
         if cursor.fetchone()[0] > 0:
             raise HTTPException(
                 status_code=400, detail="Duplicated conversation title")
 
         # Insert new conversation securely with parameterized queries
         cursor.execute("INSERT INTO conversation (userId, title) VALUES (?, ?)",
-                       (request.userID, request.title))
+                       (user_id, title))
         database.commit()
 
         # Retrieve the newly inserted conversation ID
         cursor.execute("SELECT id FROM conversation WHERE userID = ? AND title = ?",
-                       (request.userID, request.title))
+                       (user_id, title))
         conversation_id = cursor.fetchone()[0]
 
         return {"successful": True, "response": "Successfully create conversation", "conversationId": conversation_id}
@@ -282,16 +320,12 @@ async def create_conversation(request: CreateConversationRequest):
         raise HTTPException(status_code=500, detail="Unexpected server error")
 
 
-class GetConversationsRequest(BaseModel):
-    userID: str
-
-
 @app.post("/getConversations")
-async def get_conversations(request: GetConversationsRequest):
+async def get_conversations(user_id: int = Depends(get_current_user)):
     try:
         # Retrieve conversations for the given userID
         cursor.execute(
-            "SELECT id, title FROM conversation WHERE userId = ?", (request.userID,))
+            "SELECT id, title FROM conversation WHERE userId = ?", (user_id,))
         conversations = cursor.fetchall()
 
         # Format the result into a list of dictionaries
@@ -307,23 +341,23 @@ async def get_conversations(request: GetConversationsRequest):
 
 
 class DeleteConversationRequest(BaseModel):
-    userID: str
+    access_token: str
     conversationID: str
 
 
 @app.post("/deleteConversation")
-async def delete_conversation(request: DeleteConversationRequest):
+async def delete_conversation(conversationID: str, user_id: int = Depends(get_current_user)):
     try:
         # Check if the conversation exists and belongs to the user
         cursor.execute("SELECT COUNT(*) FROM conversation WHERE id = ? AND userId = ?",
-                       (request.conversationID, request.userID))
+                       (conversationID, user_id))
         if cursor.fetchone()[0] == 0:
             raise HTTPException(
                 status_code=404, detail="Conversation not found")
 
         # Delete conversation securely
         cursor.execute("DELETE FROM conversation WHERE id = ? AND userId = ?",
-                       (request.conversationID, request.userID))
+                       (conversationID, user_id))
         database.commit()
 
         return {"successful": True, "response": "Successfully deleted conversation"}
@@ -337,22 +371,24 @@ async def delete_conversation(request: DeleteConversationRequest):
 # ----------------------------------
 
 
-class AskRequest(BaseModel):
-    query: str
-    conversationID: int
-    textile: str = None
-    imagePath: str = None
-
-
 @app.post("/ask")
-async def ask_question(request: AskRequest):
+async def ask_question(query: str, conversationID: int, textile: str = None, imagePath: str = None, user_id: int = Depends(get_current_user)):
     try:
+        # Check if user eligible to use the conversation
+        cursor.execute("""
+            SELECT userId
+            FROM conversation
+            WHERE id = ?
+        """, (conversationID,))
+        if (user_id != cursor.fetchone()[0]):
+            raise HTTPException(status_code=403, detail="No access to this conversation")
+
         # Fetch conversation history
         cursor.execute("""
             SELECT message, isUser FROM message
             WHERE conversationId = ?
             ORDER BY timestamp ASC
-        """, (request.conversationID,))
+        """, (conversationID,))
         conversation_history = cursor.fetchall()
 
         # Prepare message history for OpenAI
@@ -365,7 +401,7 @@ async def ask_question(request: AskRequest):
         cursor.execute("""
             INSERT INTO message (conversationId, isUser, image, message) 
             VALUES (?, ?, ?, ?)
-        """, (request.conversationID, True, request.imagePath, request.query))
+        """, (conversationID, True, imagePath, query))
         database.commit()
 
         # Todo: add multi-agent for style
@@ -375,12 +411,12 @@ async def ask_question(request: AskRequest):
         If image uploaded, identify if they're clothing. If not, give simple answers to say that you don't think it's clothes.
         Otherwise, give a type for this in terms of style, along with some suggestions for outfit.
         Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
-        Here is the user's query: {request.query}
+        Here is the user's query: {query}
         """
 
         # If an image is uploaded, include it in the request to OpenAI
-        if request.imagePath:
-            with open(request.imagePath, "rb") as image_file:
+        if imagePath:
+            with open(imagePath, "rb") as image_file:
                 data_url = base64.b64encode(image_file.read()).decode("utf-8")
             style_agent_inputs = messages
             style_agent_inputs.append({
@@ -413,11 +449,11 @@ async def ask_question(request: AskRequest):
         Focus on providing practical suggestions that directly address the user's request.
         Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question.
         Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given.
-        Here is the user's query: {request.query}
+        Here is the user's query: {query}
         """     
 
         # If an image is uploaded, include it in the request to OpenAI
-        if request.imagePath:
+        if imagePath:
             sustain_agent_inputs = messages
             sustain_agent_inputs.append({
                 "role": "user",
@@ -445,11 +481,11 @@ async def ask_question(request: AskRequest):
         You are a Recycling Expert specializing in textile waste reduction.  
         Provide clear and actionable guidance on how users can **recycle or upcycle fabrics**.  
         If recycling options are unavailable, suggest **eco-friendly disposal alternatives**.
-        Here is the user's query: {request.query}
+        Here is the user's query: {query}
         """     
 
         # If an image is uploaded, include it in the request to OpenAI
-        if request.imagePath:
+        if imagePath:
             recycle_agent_inputs = messages
             recycle_agent_inputs.append({
                 "role": "user",
@@ -490,11 +526,11 @@ async def ask_question(request: AskRequest):
         {recycle_agent_response}
 
         Decide what to including and the propotion by the user's query:
-        {request.query}
+        {query}
         """
 
         # If an image is uploaded, include it in the request to OpenAI
-        if request.imagePath:
+        if imagePath:
             messages.append({
                 "role": "user",
                 "content": [
@@ -528,7 +564,7 @@ async def ask_question(request: AskRequest):
         cursor.execute("""
             INSERT INTO message (conversationId, isUser, image, message) 
             VALUES (?, ?, ?, ?)
-        """, (request.conversationID, False, None, generated_text))
+        """, (conversationID, False, None, generated_text))
         database.commit()
 
         return {"response": generated_text}
@@ -539,19 +575,25 @@ async def ask_question(request: AskRequest):
             status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
-class GetMessagesRequest(BaseModel):
-    conversationId: int
-
-
 @app.post("/getMessages")
-async def get_messages(request: GetMessagesRequest):
+async def get_messages(conversationID: int, user_id: int = Depends(get_current_user)):
     try:
+        # Check if user eligible to get message
+        cursor.execute("""
+            SELECT userId
+            FROM conversation
+            WHERE id = ?
+        """, (conversationID,))
+        if (user_id != cursor.fetchone()[0]):
+            raise HTTPException(status_code=403, detail="No access to this conversation")
+        
+        # Get messages
         cursor.execute("""
             SELECT message, isUser, image, timestamp
             FROM message
             WHERE conversationId = ?
             ORDER BY timestamp ASC
-        """, (request.conversationId,))
+        """, (conversationID,))
         messages = cursor.fetchall()
 
         return {

@@ -26,11 +26,11 @@ function Dashboard() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const userID = localStorage.getItem("userID");
+        const access_token = localStorage.getItem("access_token");
         const localUsername = localStorage.getItem("username");
 
-        if (!userID || !localUsername) {
-            alert("You need to log in first!");
+        if (!access_token || !localUsername) {
+            alert("Session expired! Please login again.");
             navigate("/");
             return;
         }
@@ -43,8 +43,8 @@ function Dashboard() {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
                     },
-                    body: JSON.stringify({ userID }),
                 });
 
                 if (!response.ok) {
@@ -78,8 +78,9 @@ function Dashboard() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
                 },
-                body: JSON.stringify({ userID, title: newConversationTitle }),
+                body: JSON.stringify({ title: newConversationTitle }),
             });
 
             if (!response.ok) {

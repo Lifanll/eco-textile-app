@@ -20,12 +20,28 @@ import UploadImage from "./UI Components/uploadImage";
 import Conversation from "./UI Components/conversation";
 
 // Helper function to check authentication
-const isAuthenticated = () => localStorage.getItem("userID") !== null;
+const isAuthenticated = () => {
+  const token = localStorage.getItem("access_token");
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1])); // Decode JWT payload
+    const expirationTime = payload.exp * 1000; // Convert to milliseconds
+    return expirationTime > Date.now(); // Check if token is still valid
+  } catch (error) {
+    return false; // Invalid token
+  }
+};
 
 // Wrapper for protected routes
 const ProtectedRoute = ({ children }) => {
-  return isAuthenticated() ? children : <Navigate to="/" />;
+  if (!isAuthenticated()) {
+    localStorage.removeItem("access_token"); // Remove invalid token
+    return <Navigate to="/" />;
+  }
+  return children;
 };
+
 
 // Main App Component
 function App() {

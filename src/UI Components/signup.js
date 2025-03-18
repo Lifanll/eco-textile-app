@@ -44,8 +44,8 @@ function SignUp() {
             }
 
             // Save userID to localStorage for session management
-            localStorage.setItem("userID", data.userID);
-            localStorage.setItem("username", username);
+            localStorage.setItem("access_token", data.access_token);
+            localStorage.setItem("username", username)
 
             navigate("/dashboard");
         } catch (error) {

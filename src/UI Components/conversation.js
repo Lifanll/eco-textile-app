@@ -19,7 +19,7 @@ import remarkGfm from "remark-gfm";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 function Conversation() {
-    const { conversationId } = useParams(); // Get conversationId from URL
+    const { conversationID } = useParams(); // Get conversationId from URL
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [uploadedImage, setUploadedImage] = useState(null); // Single image
@@ -34,8 +34,9 @@ function Conversation() {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
                     },
-                    body: JSON.stringify({ conversationId: parseInt(conversationId) }),
+                    body: JSON.stringify({ conversationID: parseInt(conversationID) }),
                 });
 
                 const data = await response.json();
@@ -46,7 +47,7 @@ function Conversation() {
         };
 
         fetchMessages();
-    }, [conversationId]);
+    }, [conversationID]);
 
     const handleSendMessage = async () => {
         if (!newMessage.trim() && !uploadedImage) {
@@ -82,10 +83,11 @@ function Conversation() {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("access_token")}`,  
                 },
                 body: JSON.stringify({
                     query: newMessage,
-                    conversationID: parseInt(conversationId),
+                    conversationID: parseInt(conversationID),
                     textile,
                     imagePath,
                 }),
@@ -144,7 +146,7 @@ function Conversation() {
         <Container maxWidth="md">
             <Box mt={5}>
                 <Typography variant="h5" gutterBottom>
-                    Conversation {conversationId}
+                    Conversation {conversationID}
                 </Typography>
 
                 {/* Message List */}

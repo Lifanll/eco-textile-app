@@ -39,7 +39,7 @@ function Login() {
             }
 
             // Save userID to localStorage for session management
-            localStorage.setItem("userID", data.userID);
+            localStorage.setItem("access_token", data.access_token);
             localStorage.setItem("username", username);
 
             // Navigate to dashboard on success
