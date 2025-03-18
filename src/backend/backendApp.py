@@ -289,24 +289,29 @@ async def login(request: LoginRequest):
 # -----------------------------
 # User Conversations Management
 # -----------------------------
+
+class CreateConversationRequest(BaseModel):
+    title: str
+
+
 @app.post("/createConversation")
-async def create_conversation(title: str, user_id: int = Depends(get_current_user)):
+async def create_conversation(request: CreateConversationRequest, user_id: int = Depends(get_current_user)):
     try:
         # Check if the conversation already exists for current user
         cursor.execute("SELECT COUNT(*) FROM conversation WHERE userId = ? AND title = ?",
-                       (user_id, title))
+                       (user_id, request.title))
         if cursor.fetchone()[0] > 0:
             raise HTTPException(
                 status_code=400, detail="Duplicated conversation title")
 
         # Insert new conversation securely with parameterized queries
         cursor.execute("INSERT INTO conversation (userId, title) VALUES (?, ?)",
-                       (user_id, title))
+                       (user_id, request.title))
         database.commit()
 
         # Retrieve the newly inserted conversation ID
         cursor.execute("SELECT id FROM conversation WHERE userID = ? AND title = ?",
-                       (user_id, title))
+                       (user_id, request.title))
         conversation_id = cursor.fetchone()[0]
 
         return {"successful": True, "response": "Successfully create conversation", "conversationId": conversation_id}
@@ -337,23 +342,22 @@ async def get_conversations(user_id: int = Depends(get_current_user)):
 
 
 class DeleteConversationRequest(BaseModel):
-    access_token: str
     conversationID: str
 
 
 @app.post("/deleteConversation")
-async def delete_conversation(conversationID: str, user_id: int = Depends(get_current_user)):
+async def delete_conversation(request: DeleteConversationRequest, user_id: int = Depends(get_current_user)):
     try:
         # Check if the conversation exists and belongs to the user
         cursor.execute("SELECT COUNT(*) FROM conversation WHERE id = ? AND userId = ?",
-                       (conversationID, user_id))
+                       (request.conversationID, user_id))
         if cursor.fetchone()[0] == 0:
             raise HTTPException(
                 status_code=404, detail="Conversation not found")
 
         # Delete conversation securely
         cursor.execute("DELETE FROM conversation WHERE id = ? AND userId = ?",
-                       (conversationID, user_id))
+                       (request.conversationID, user_id))
         database.commit()
 
         return {"successful": True, "response": "Successfully deleted conversation"}
@@ -366,16 +370,22 @@ async def delete_conversation(conversationID: str, user_id: int = Depends(get_cu
 # Conversation Messages Management
 # ----------------------------------
 
+class AskRequest(BaseModel):
+    query: str
+    conversationID: int
+    textile: str = None
+    imagePath: str = None
+
 
 @app.post("/ask")
-async def ask_question(query: str, conversationID: int, textile: str = None, imagePath: str = None, user_id: int = Depends(get_current_user)):
+async def ask_question(request: AskRequest, user_id: int = Depends(get_current_user)):
     try:
         # Check if user eligible to use the conversation
         cursor.execute("""
             SELECT userId
             FROM conversation
             WHERE id = ?
-        """, (conversationID,))
+        """, (request.conversationID,))
         if (user_id != cursor.fetchone()[0]):
             raise HTTPException(status_code=403, detail="No access to this conversation")
 
@@ -384,7 +394,7 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
             SELECT message, isUser FROM message
             WHERE conversationId = ?
             ORDER BY timestamp ASC
-        """, (conversationID,))
+        """, (request.conversationID,))
         conversation_history = cursor.fetchall()
 
         # Prepare message history for OpenAI
@@ -397,7 +407,7 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
         cursor.execute("""
             INSERT INTO message (conversationId, isUser, image, message) 
             VALUES (?, ?, ?, ?)
-        """, (conversationID, True, imagePath, query))
+        """, (request.conversationID, True, request.imagePath, request.query))
         database.commit()
 
         # Todo: add multi-agent for style
@@ -407,12 +417,12 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
         If image uploaded, identify if they're clothing. If not, give simple answers to say that you don't think it's clothes.
         Otherwise, give a type for this in terms of style, along with some suggestions for outfit.
         Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
-        Here is the user's query: {query}
+        Here is the user's query: {request.query}
         """
 
         # If an image is uploaded, include it in the request to OpenAI
-        if imagePath:
-            with open(imagePath, "rb") as image_file:
+        if request.imagePath:
+            with open(request.imagePath, "rb") as image_file:
                 data_url = base64.b64encode(image_file.read()).decode("utf-8")
             style_agent_inputs = messages
             style_agent_inputs.append({
@@ -440,16 +450,16 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
         # Todo: add another agent focus on textile sustainablity
 
         sustain_agent_query = f"""
-        If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {textile}.
+        If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}.
         Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
         Focus on providing practical suggestions that directly address the user's request.
         Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question.
         Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given.
-        Here is the user's query: {query}
+        Here is the user's query: {request.query}
         """     
 
         # If an image is uploaded, include it in the request to OpenAI
-        if imagePath:
+        if request.imagePath:
             sustain_agent_inputs = messages
             sustain_agent_inputs.append({
                 "role": "user",
@@ -477,11 +487,11 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
         You are a Recycling Expert specializing in textile waste reduction.  
         Provide clear and actionable guidance on how users can **recycle or upcycle fabrics**.  
         If recycling options are unavailable, suggest **eco-friendly disposal alternatives**.
-        Here is the user's query: {query}
+        Here is the user's query: {request.query}
         """     
 
         # If an image is uploaded, include it in the request to OpenAI
-        if imagePath:
+        if request.imagePath:
             recycle_agent_inputs = messages
             recycle_agent_inputs.append({
                 "role": "user",
@@ -522,11 +532,11 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
         {recycle_agent_response}
 
         Decide what to including and the propotion by the user's query:
-        {query}
+        {request.query}
         """
 
         # If an image is uploaded, include it in the request to OpenAI
-        if imagePath:
+        if request.imagePath:
             messages.append({
                 "role": "user",
                 "content": [
@@ -560,7 +570,7 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
         cursor.execute("""
             INSERT INTO message (conversationId, isUser, image, message) 
             VALUES (?, ?, ?, ?)
-        """, (conversationID, False, None, generated_text))
+        """, (request.conversationID, False, None, generated_text))
         database.commit()
 
         return {"response": generated_text}
@@ -569,17 +579,20 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
         print(f"Error: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Unexpected error: {str(e)}")
+    
+class GetMessagesRequest(BaseModel):
+    conversationID: int
 
 
 @app.post("/getMessages")
-async def get_messages(conversationID: int, user_id: int = Depends(get_current_user)):
+async def get_messages(request: GetMessagesRequest, user_id: int = Depends(get_current_user)):
     try:
         # Check if user eligible to get message
         cursor.execute("""
             SELECT userId
             FROM conversation
             WHERE id = ?
-        """, (conversationID,))
+        """, (request.conversationID,))
         if (user_id != cursor.fetchone()[0]):
             raise HTTPException(status_code=403, detail="No access to this conversation")
         
@@ -589,7 +602,7 @@ async def get_messages(conversationID: int, user_id: int = Depends(get_current_u
             FROM message
             WHERE conversationId = ?
             ORDER BY timestamp ASC
-        """, (conversationID,))
+        """, (request.conversationID,))
         messages = cursor.fetchall()
 
         return {
