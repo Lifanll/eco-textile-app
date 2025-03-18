@@ -444,7 +444,7 @@ async def ask_question(query: str, conversationID: int, textile: str = None, ima
         # Todo: add another agent focus on textile sustainablity
 
         sustain_agent_query = f"""
-        If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}.
+        If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {textile}.
         Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
         Focus on providing practical suggestions that directly address the user's request.
         Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question.
