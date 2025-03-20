@@ -20,7 +20,6 @@ cursor.execute("""
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
         userId INTEGER, 
         title TEXT NOT NULL, 
-        summary TEXT,
         FOREIGN KEY(userId) REFERENCES user(id)
     )
 """)
@@ -32,21 +31,10 @@ cursor.execute("""
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         conversationId INTEGER,
         isUser BOOLEAN NOT NULL,
-        image TEXT,
+        imagePath TEXT,
         message TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(conversationId) REFERENCES conversation(id)           
-    )
-""")
-
-# Correct image table
-cursor.execute("""
-    CREATE TABLE image(
-        id INTEGER PRIMARY KEY AUTOINCREMENT, 
-        conversationId INTEGER, 
-        line INTEGER, 
-        path TEXT UNIQUE, 
-        FOREIGN KEY(conversationId) REFERENCES conversation(id)
     )
 """)
 database.commit()

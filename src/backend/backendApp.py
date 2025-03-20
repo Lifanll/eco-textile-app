@@ -405,7 +405,7 @@ async def ask_question(request: AskRequest, user_id: int = Depends(get_current_u
 
         # Save the user's message (and image path) into the database
         cursor.execute("""
-            INSERT INTO message (conversationId, isUser, image, message) 
+            INSERT INTO message (conversationId, isUser, imagePath, message) 
             VALUES (?, ?, ?, ?)
         """, (request.conversationID, True, request.imagePath, request.query))
         database.commit()
@@ -450,13 +450,13 @@ async def ask_question(request: AskRequest, user_id: int = Depends(get_current_u
         # Todo: add another agent focus on textile sustainablity
 
         sustain_agent_query = f"""
-        If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}.
+        If image uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}.
         Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
         Focus on providing practical suggestions that directly address the user's request.
         Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question.
         Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given.
         Here is the user's query: {request.query}
-        """     
+        """
 
         # If an image is uploaded, include it in the request to OpenAI
         if request.imagePath:
@@ -568,7 +568,7 @@ async def ask_question(request: AskRequest, user_id: int = Depends(get_current_u
 
         # Save the LLM's response into the database
         cursor.execute("""
-            INSERT INTO message (conversationId, isUser, image, message) 
+            INSERT INTO message (conversationId, isUser, imagePath, message) 
             VALUES (?, ?, ?, ?)
         """, (request.conversationID, False, None, generated_text))
         database.commit()
@@ -598,7 +598,7 @@ async def get_messages(request: GetMessagesRequest, user_id: int = Depends(get_c
         
         # Get messages
         cursor.execute("""
-            SELECT message, isUser, image, timestamp
+            SELECT message, isUser, imagePath, timestamp
             FROM message
             WHERE conversationId = ?
             ORDER BY timestamp ASC
