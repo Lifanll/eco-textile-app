@@ -20,6 +20,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 function Conversation() {
     const { conversationID } = useParams(); // Get conversationId from URL
+    console.log(conversationID);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [uploadedImage, setUploadedImage] = useState(null); // Single image
@@ -30,6 +31,8 @@ function Conversation() {
     useEffect(() => {
         const fetchMessages = async () => {
             try {
+                console.log(conversationID);
+                console.log(parseInt(conversationID))
                 const response = await fetch("https://eco-textile-app-backend.onrender.com/getMessages", {
                     method: "POST",
                     headers: {

@@ -88,7 +88,7 @@ function Dashboard() {
             }
 
             const data = await response.json();
-            alert("Conversation created successfully!");
+            console.log(data)
 
             // Add the new conversation to the list
             setConversations((prevConversations) => [
