@@ -271,6 +271,10 @@ async def login(request: LoginRequest):
             "SELECT id, password FROM user WHERE username = ?", (request.username,))
         user = cursor.fetchone()
 
+        print(request.password)
+        print(user[1])
+        print(get_password_hash(request.password))
+
         # Check if user exists and the password matches
         if not user or get_password_hash(request.password) != user[1]:
             raise HTTPException(
