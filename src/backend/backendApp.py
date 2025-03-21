@@ -272,7 +272,7 @@ async def login(request: LoginRequest):
         user = cursor.fetchone()
 
         # Check if user exists and the password matches
-        if not user or request.password != user[1]:
+        if not user or get_password_hash(request.password) != user[1]:
             raise HTTPException(
                 status_code=400, detail="Wrong username or password")
 
