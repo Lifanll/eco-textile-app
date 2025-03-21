@@ -522,8 +522,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
 
         final_agent_query = f"""
         Your job is to conclude content from other three agents.
-        Aim to make conversational response.
-        Exclude or cut down some responses from agents if it's not relevant to user's query.
+        Focus on user query and give conversational response, you don't need to include all the information from other agents.
         Here are the response from the other three agent:
         Style agent:
         {style_agent_response}.
@@ -563,7 +562,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
 
         # Get response from the LLM
         chat_completion = client.chat.completions.create(
-            temperature=0.4,
+            temperature=0.1,
             messages=messages,
             model=GPT_MODEL,
         )

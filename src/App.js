@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -9,7 +9,8 @@ import {
   BrowserRouter as Router,
   Route,
   Routes,
-  Navigate,
+  useLocation,
+  useNavigate,
 } from "react-router-dom";
 import "./App.css";
 import Login from "./UI Components/login";
@@ -18,7 +19,7 @@ import Dashboard from "./UI Components/dashboard";
 import Options from "./UI Components/options";
 import UploadImage from "./UI Components/uploadImage";
 import Conversation from "./UI Components/conversation";
-import jwtDecode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 // Helper function to check authentication
 const isAuthenticated = () => {
@@ -33,22 +34,37 @@ const isAuthenticated = () => {
   }
 };
 
-// check authentication when the page loads
-useEffect(() => {
-  if (!isAuthenticated()) {
+// ProtectedRoute Wrapper
+const ProtectedRoute = ({ element }) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
       alert("Session expired, please log in again.");
       localStorage.removeItem("access_token");
       localStorage.removeItem("userID");
       localStorage.removeItem("username");
-      window.location.href = "/";
-  }
-}, []);
+      navigate("/");
+    }
+  }, [navigate]);
 
+  return element;
+};
 
 // Main App Component
 function App() {
   return (
     <Router>
+      <AppContent />
+    </Router>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+
+  return (
+    <>
       {/* Navigation Bar */}
       <AppBar position="static">
         <Toolbar>
@@ -77,30 +93,22 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route
           path="/dashboard"
-          element={
-            <Dashboard />
-          }
+          element={<ProtectedRoute element={<Dashboard />} />}
         />
         <Route
           path="/options"
-          element={
-            <Options />
-          }
+          element={<ProtectedRoute element={<Options />} />}
         />
         <Route
           path="/upload"
-          element={
-            <UploadImage />
-          }
+          element={<ProtectedRoute element={<UploadImage />} />}
         />
         <Route
           path="/conversation/:conversationId"
-          element={
-            <Conversation />
-          }
+          element={<ProtectedRoute element={<Conversation />} />}
         />
       </Routes>
-    </Router>
+    </>
   );
 }
 

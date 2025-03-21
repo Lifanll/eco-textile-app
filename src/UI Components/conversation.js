@@ -20,6 +20,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 function Conversation() {
     const { conversationId } = useParams(); // Get conversationId from URL
+    console.log(conversationId);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [uploadedImage, setUploadedImage] = useState(null); // Single image
