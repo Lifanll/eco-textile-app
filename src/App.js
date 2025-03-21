@@ -111,7 +111,7 @@ function App() {
           }
         />
         <Route
-          path="/conversation/:conversationId"
+          path="/conversation/:conversationID"
           element={
             <ProtectedRoute>
               <Conversation />
