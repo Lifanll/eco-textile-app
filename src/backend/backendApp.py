@@ -228,7 +228,7 @@ class SignUpRequest(BaseModel):
 
 
 @app.post("/signup")
-async def signup(request: SignUpRequest):
+async def signup(request: SignUpRequest = Body(...)):
     try:
         # Check if the username already exists
         cursor.execute(
@@ -264,7 +264,7 @@ class LoginRequest(BaseModel):
 
 
 @app.post("/login")
-async def login(request: LoginRequest):
+async def login(request: LoginRequest = Body(...)):
     try:
         # Fetch the password for the given username securely using parameterized query
         cursor.execute(
@@ -297,7 +297,7 @@ class CreateConversationRequest(BaseModel):
 
 
 @app.post("/createConversation")
-async def create_conversation(request: CreateConversationRequest, user_id: int = Depends(get_current_user)):
+async def create_conversation(request: CreateConversationRequest = Body(...), user_id: int = Depends(get_current_user)):
     try:
         # Check if the conversation already exists for current user
         cursor.execute("SELECT COUNT(*) FROM conversation WHERE userId = ? AND title = ?",
