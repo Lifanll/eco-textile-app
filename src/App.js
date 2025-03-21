@@ -72,7 +72,7 @@ function App() {
 
       {/* Routes */}
       <Routes>
-        
+
         <Route path="/" element={<Login />} />
 
         <Route path="/signup" element={<SignUp />} />
@@ -96,7 +96,7 @@ function App() {
           }
         />
         <Route
-          path="/conversation/:conversationID"
+          path="/conversation/:conversationId"
           element={
             <Conversation />
           }

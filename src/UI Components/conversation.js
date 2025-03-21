@@ -19,8 +19,7 @@ import remarkGfm from "remark-gfm";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 function Conversation() {
-    const { conversationID } = useParams(); // Get conversationId from URL
-    console.log(conversationID);
+    const { conversationId } = useParams(); // Get conversationId from URL
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [uploadedImage, setUploadedImage] = useState(null); // Single image
@@ -31,15 +30,13 @@ function Conversation() {
     useEffect(() => {
         const fetchMessages = async () => {
             try {
-                console.log(conversationID);
-                console.log(parseInt(conversationID))
                 const response = await fetch("https://eco-textile-app-backend.onrender.com/getMessages", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
                     },
-                    body: JSON.stringify({ conversationID: parseInt(conversationID) }),
+                    body: JSON.stringify({ conversationID: parseInt(conversationId) }),
                 });
 
                 const data = await response.json();
@@ -50,7 +47,7 @@ function Conversation() {
         };
 
         fetchMessages();
-    }, [conversationID]);
+    }, [conversationId]);
 
     const handleSendMessage = async () => {
         if (!newMessage.trim() && !uploadedImage) {
@@ -90,7 +87,7 @@ function Conversation() {
                 },
                 body: JSON.stringify({
                     query: newMessage,
-                    conversationID: parseInt(conversationID),
+                    conversationID: parseInt(conversationId),
                     textile,
                     imagePath,
                 }),
@@ -149,7 +146,7 @@ function Conversation() {
         <Container maxWidth="md">
             <Box mt={5}>
                 <Typography variant="h5" gutterBottom>
-                    Conversation {conversationID}
+                    Conversation {conversationId}
                 </Typography>
 
                 {/* Message List */}
