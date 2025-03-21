@@ -33,15 +33,6 @@ const isAuthenticated = () => {
   }
 };
 
-// Wrapper for protected routes
-const ProtectedRoute = ({ children }) => {
-  if (!isAuthenticated()) {
-    localStorage.removeItem("access_token"); // Remove invalid token
-    return <Navigate to="/" />;
-  }
-  return children;
-};
-
 // check authentication when the page loads
 useEffect(() => {
   if (!isAuthenticated()) {
@@ -81,41 +72,33 @@ function App() {
 
       {/* Routes */}
       <Routes>
-        {/* Public Routes */}
+        
         <Route path="/" element={<Login />} />
+
         <Route path="/signup" element={<SignUp />} />
 
-        {/* Protected Routes */}
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
+            <Dashboard />
           }
         />
         <Route
           path="/options"
           element={
-            <ProtectedRoute>
-              <Options />
-            </ProtectedRoute>
+            <Options />
           }
         />
         <Route
           path="/upload"
           element={
-            <ProtectedRoute>
-              <UploadImage />
-            </ProtectedRoute>
+            <UploadImage />
           }
         />
         <Route
           path="/conversation/:conversationID"
           element={
-            <ProtectedRoute>
-              <Conversation />
-            </ProtectedRoute>
+            <Conversation />
           }
         />
       </Routes>
