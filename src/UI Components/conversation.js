@@ -28,6 +28,12 @@ function Conversation() {
 
     // Fetch messages when the component loads or conversationId changes
     useEffect(() => {
+        const conversationID = Number(conversationId);
+        if (!conversationID) {
+            console.warn("Invalid conversation ID:", conversationId);
+            return;
+        }
+
         const fetchMessages = async () => {
             try {
                 const response = await fetch("https://eco-textile-app-backend.onrender.com/getMessages", {
@@ -36,7 +42,7 @@ function Conversation() {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
                     },
-                    body: JSON.stringify({ conversationID: parseInt(conversationId) }),
+                    body: JSON.stringify({ conversationID }),
                 });
 
                 const data = await response.json();

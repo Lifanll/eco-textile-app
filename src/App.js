@@ -59,6 +59,7 @@ function App() {
             <Button
               color="inherit"
               onClick={() => {
+                localStorage.removeItem("access_token");
                 localStorage.removeItem("userID");
                 localStorage.removeItem("username");
                 window.location.href = "/";
@@ -72,11 +73,8 @@ function App() {
 
       {/* Routes */}
       <Routes>
-
         <Route path="/" element={<Login />} />
-
         <Route path="/signup" element={<SignUp />} />
-
         <Route
           path="/dashboard"
           element={
