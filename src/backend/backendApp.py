@@ -317,7 +317,7 @@ async def create_conversation(request: CreateConversationRequest = Body(...), us
                        (user_id, request.title))
         conversation_id = cursor.fetchone()[0]
 
-        return {"successful": True, "response": "Successfully create conversation", "conversationId": conversation_id}
+        return {"conversationID": conversation_id}
 
     except Exception as e:
         print(f"Unexpected error: {e}")
@@ -363,7 +363,7 @@ async def delete_conversation(request: DeleteConversationRequest = Body(...), us
                        (request.conversationID, user_id))
         database.commit()
 
-        return {"successful": True, "response": "Successfully deleted conversation"}
+        return {}
 
     except Exception as e:
         print(f"Unexpected error: {e}")
