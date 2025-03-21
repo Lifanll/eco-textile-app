@@ -1,5 +1,5 @@
 import datetime
-from fastapi import Depends, FastAPI, File, Security, UploadFile, HTTPException
+from fastapi import Body, Depends, FastAPI, File, Security, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 import jwt
@@ -348,7 +348,7 @@ class DeleteConversationRequest(BaseModel):
 
 
 @app.post("/deleteConversation")
-async def delete_conversation(request: DeleteConversationRequest, user_id: int = Depends(get_current_user)):
+async def delete_conversation(request: DeleteConversationRequest = Body(...), user_id: int = Depends(get_current_user)):
     try:
         # Check if the conversation exists and belongs to the user
         cursor.execute("SELECT COUNT(*) FROM conversation WHERE id = ? AND userId = ?",
@@ -380,7 +380,7 @@ class AskRequest(BaseModel):
 
 
 @app.post("/ask")
-async def ask_question(request: AskRequest, user_id: int = Depends(get_current_user)):
+async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(get_current_user)):
     try:
         # Check if user eligible to use the conversation
         cursor.execute("""
@@ -587,7 +587,7 @@ class GetMessagesRequest(BaseModel):
 
 
 @app.post("/getMessages")
-async def get_messages(request: GetMessagesRequest, user_id: int = Depends(get_current_user)):
+async def get_messages(request: GetMessagesRequest = Body(...), user_id: int = Depends(get_current_user)):
     try:
         # Check if user eligible to get message
         cursor.execute("""
