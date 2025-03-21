@@ -271,14 +271,12 @@ async def login(request: LoginRequest):
             "SELECT id, password FROM user WHERE username = ?", (request.username,))
         user = cursor.fetchone()
 
-        print(request.password)
-        print(user[1])
-        print(get_password_hash(request.password))
+        if not user:
+            raise HTTPException(status_code=400, detail="Wrong username or password")
 
-        # Check if user exists and the password matches
-        if not user or get_password_hash(request.password) != user[1]:
-            raise HTTPException(
-                status_code=400, detail="Wrong username or password")
+        if not verify_password(request.password, user[1]):
+            raise HTTPException(status_code=400, detail="Wrong username or password")
+
 
         # Retrieve user ID, user conversations and respond
         user_id = user[0]
