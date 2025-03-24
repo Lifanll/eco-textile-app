@@ -522,6 +522,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
 
         final_agent_query = f"""
         Your job is to conclude content from other three agents.
+        If the image path is empty, it means that user didn't upload an image.
         Focus on user query and give conversational response, you don't need to include all the information from other agents.
         Here are the response from the other three agent:
         Style agent:
