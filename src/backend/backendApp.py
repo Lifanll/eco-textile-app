@@ -623,16 +623,6 @@ async def get_messages(request: GetMessagesRequest = Body(...), user_id: int = D
     except Exception as e:
         print(f"Error fetching messages: {e}")
         raise HTTPException(status_code=500, detail="Error fetching messages")
-    
-# ---------------------
-# Debug Logs
-# ---------------------
-
-@app.middleware("http")
-async def log_body(request: Request, call_next):
-    body = await request.body()
-    print("🔍 RAW REQUEST BODY:", body.decode())
-    return await call_next(request)
 
 # Run using `uvicorn`:
 # uvicorn src.backend.backendApp:app --host 127.0.0.1 --port 8000 --reload
