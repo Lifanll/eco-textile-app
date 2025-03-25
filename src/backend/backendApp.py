@@ -149,7 +149,7 @@ async def predict(image: UploadFile = File(...)):
                 f.write(chunk)
 
         # Open and preprocess the image
-        img = Image.open(image.file).convert("RGB")
+        img = Image.open(image_path).convert("RGB")
         inputs = processor(images=img, return_tensors="pt")
 
         with torch.no_grad():
