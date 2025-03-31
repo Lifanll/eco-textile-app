@@ -416,9 +416,9 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
         # Todo: add multi-agent for style
 
         style_agent_query = f"""
-        You are an expert on fashion design.
+        You are an expert on fashion design focued on style, you do not have to consider any other part of user query but style related.
         If image uploaded, identify if they're clothing. If not, give simple answers to say that you don't think it's clothes.
-        Otherwise, give a type for this in terms of style, along with some suggestions for outfit.
+        Otherwise, give a type for this in terms of style, along with some suggestions for outfit. When suggesting on outfit, consider sustainability.
         Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
         Here is the user's query: {request.query}
         """
@@ -524,6 +524,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
         Your job is to conclude content from other three agents.
         If the image path is empty, it means that user didn't upload an image.
         Focus on user query and give conversational response, you don't need to include all the information from other agents.
+        if the query is sent with "\n\n\n - Sent From VR Cardboard Headset. ", response will be read out by TTS instead of displaying text, so generate response best for read out.
         Here are the response from the other three agent:
         Style agent:
         {style_agent_response}.
