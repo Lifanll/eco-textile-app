@@ -484,6 +484,8 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
 
         sustain_agent_response = sustain_agent_chat_complete.choices[0].message.content
 
+        print("\n\n\n" + sustain_agent_response + "\n\n\n")
+
         # recycling agent
 
         recycle_agent_query = f"""
