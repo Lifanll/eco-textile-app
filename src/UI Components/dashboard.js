@@ -106,7 +106,8 @@ function Dashboard() {
     };
 
     // Function to navigate to a conversation
-    const handleOpenConversation = (conversationID) => {
+    const handleOpenConversation = (conversationTitle, conversationID) => {
+        localStorage.setItem("conversationTitle", conversationTitle)
         navigate(`/conversation/${conversationID}`); // Pass conversationID as a route parameter
     };
 
@@ -135,7 +136,7 @@ function Dashboard() {
                                             size="small"
                                             variant="contained"
                                             color="primary"
-                                            onClick={() => handleOpenConversation(conversation.id)}
+                                            onClick={() => handleOpenConversation(conversation.title, conversation.id)}
                                         >
                                             Open
                                         </Button>

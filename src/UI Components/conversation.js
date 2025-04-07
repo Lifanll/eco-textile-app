@@ -19,8 +19,9 @@ import remarkGfm from "remark-gfm";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 function Conversation() {
+    const messagesEndRef = useRef(null);
     const { conversationId } = useParams(); // Get conversationId from URL
-    console.log(conversationId);
+    const conversationTitle = localStorage.getItem("conversationTitle");
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [uploadedImage, setUploadedImage] = useState(null); // Single image
@@ -55,6 +56,12 @@ function Conversation() {
 
         fetchMessages();
     }, [conversationId]);
+
+    useEffect(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages]);
 
     const handleSendMessage = async () => {
         if (!newMessage.trim() && !uploadedImage) {
@@ -153,7 +160,7 @@ function Conversation() {
         <Container maxWidth="md">
             <Box mt={5}>
                 <Typography variant="h5" gutterBottom>
-                    Conversation {conversationId}
+                    {conversationTitle}
                 </Typography>
 
                 {/* Message List */}
@@ -215,6 +222,7 @@ function Conversation() {
                                 <Divider variant="inset" component="li" />
                             </React.Fragment>
                         ))}
+                        <div ref={messagesEndRef} />
                     </List>
 
                 </Paper>
@@ -287,6 +295,12 @@ function Conversation() {
                     fullWidth
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault(); // Prevent newline
+                            handleSendMessage(); // Send message
+                        }
+                    }}
                 />
                 <Box mt={2} display="flex" gap={2}>
                     <Button

@@ -16,8 +16,6 @@ import "./App.css";
 import Login from "./UI Components/login";
 import SignUp from "./UI Components/signup";
 import Dashboard from "./UI Components/dashboard";
-import Options from "./UI Components/options";
-import UploadImage from "./UI Components/uploadImage";
 import Conversation from "./UI Components/conversation";
 import { jwtDecode } from "jwt-decode";
 
@@ -94,14 +92,6 @@ function AppContent() {
         <Route
           path="/dashboard"
           element={<ProtectedRoute element={<Dashboard />} />}
-        />
-        <Route
-          path="/options"
-          element={<ProtectedRoute element={<Options />} />}
-        />
-        <Route
-          path="/upload"
-          element={<ProtectedRoute element={<UploadImage />} />}
         />
         <Route
           path="/conversation/:conversationId"
