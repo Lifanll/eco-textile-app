@@ -88,7 +88,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/dashboard" element={<ChatPage />}></Route>
+        <Route path="/dashboard" element={<ChatPage />} />
       </Routes>
     </>
   );
