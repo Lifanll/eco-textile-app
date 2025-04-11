@@ -19,8 +19,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-function Conversation() {
-    const { conversationId } = useParams();
+function Conversation({ conversationID }) {
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -32,7 +31,6 @@ function Conversation() {
     const [typing, setTyping] = useState(false); // Fake typing indicator
 
     useEffect(() => {
-        const conversationID = Number(conversationId);
         if (!conversationID) return;
 
         const fetchMessages = async () => {
@@ -53,7 +51,7 @@ function Conversation() {
         };
 
         fetchMessages();
-    }, [conversationId]);
+    }, [conversationID]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -86,7 +84,6 @@ function Conversation() {
             }
 
             const userMessage = newMessage;
-            const conversationID = parseInt(conversationId);
 
             setMessages((prev) => [
                 ...prev,

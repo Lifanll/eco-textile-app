@@ -345,7 +345,7 @@ async def get_conversations(user_id: int = Depends(get_current_user)):
 
 
 class DeleteConversationRequest(BaseModel):
-    conversationID: str
+    conversationID: int
 
 
 @app.post("/deleteConversation")
@@ -361,6 +361,31 @@ async def delete_conversation(request: DeleteConversationRequest = Body(...), us
         # Delete conversation securely
         cursor.execute("DELETE FROM conversation WHERE id = ? AND userId = ?",
                        (request.conversationID, user_id))
+        database.commit()
+
+        return {}
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        raise HTTPException(status_code=500, detail="Unexpected server error")
+    
+class RenameConversationRequest(BaseModel):
+    conversationID: int
+    newTitle: str
+
+@app.post("/renameConversation")
+async def rename_conversation(request: RenameConversationRequest = Body(...), user_id: int = Depends(get_current_user)):
+    try:
+        # Check if the conversation exists and belongs to the user
+        cursor.execute("SELECT COUNT(*) FROM conversation WHERE id = ? AND userId = ?",
+                       (request.conversationID, user_id))
+        if cursor.fetchone()[0] == 0:
+            raise HTTPException(
+                status_code=404, detail="Conversation not found")
+
+        # Update conversation securely
+        cursor.execute("UPDATE conversation SET title = ? WHERE id = ? AND userId = ?",
+                       (request.newTitle, request.conversationID, user_id))
         database.commit()
 
         return {}

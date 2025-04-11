@@ -15,9 +15,8 @@ import {
 import "./App.css";
 import Login from "./UI Components/login";
 import SignUp from "./UI Components/signup";
-import Dashboard from "./UI Components/dashboard";
-import Conversation from "./UI Components/conversation";
 import { jwtDecode } from "jwt-decode";
+import ChatPage from "./UI Components/chatPage";
 
 // Helper function to check authentication
 const isAuthenticated = () => {
@@ -89,14 +88,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route
-          path="/dashboard"
-          element={<ProtectedRoute element={<Dashboard />} />}
-        />
-        <Route
-          path="/conversation/:conversationId"
-          element={<ProtectedRoute element={<Conversation />} />}
-        />
+        <Route path="/dashboard" element={<ChatPage />}></Route>
       </Routes>
     </>
   );
