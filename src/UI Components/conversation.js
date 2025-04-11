@@ -23,7 +23,6 @@ function Conversation({ conversationID }) {
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
 
-    const conversationTitle = localStorage.getItem("conversationTitle");
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [uploadedImage, setUploadedImage] = useState(null);
@@ -121,122 +120,135 @@ function Conversation({ conversationID }) {
 
     const handleFileSelect = (e) => {
         const file = Array.from(e.target.files).find((f) => f.type.startsWith("image/"));
-        if (file) setUploadedImage(file);
+
+        if (!file) {
+            alert("Please upload a valid image file (JPEG, PNG, etc).");
+            return;
+        }
+    
+        const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+        if (!validTypes.includes(file.type)) {
+            alert("Unsupported image format. Please use JPEG, PNG, or WEBP.");
+            return;
+        }
+    
+        if (file.size > 5 * 1024 * 1024) { // optional size check: 5MB
+            alert("File size too large. Please upload an image under 5MB.");
+            return;
+        }
+    
+        setUploadedImage(file);
     };
 
     return (
-        <Container maxWidth="md">
-            <Box mt={5}>
-                <Typography variant="h5" gutterBottom>{conversationTitle}</Typography>
-
-                <Paper elevation={3} sx={{
-                    height: "420px", overflowY: "scroll", borderRadius: 2, p: 2, mb: 2,
+        <Box display="flex" flexDirection="column" height="100%" p={2}>
+            {/* Message List (scrollable) */}
+            <Box
+                component={Paper}
+                elevation={3}
+                sx={{
+                    flexGrow: 1,
+                    overflowY: "auto",
+                    borderRadius: 2,
+                    p: 2,
+                    mb: 2,
                     backgroundColor: "#f9fafb"
-                }}>
-                    <List>
-                        {messages.map((msg, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3 }}
+                }}
+            >
+                {/* Messages... */}
+                <List>
+                    {messages.map((msg, index) => (
+                        <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                            <ListItem
+                                sx={{
+                                    justifyContent: msg.isUser ? "flex-end" : "flex-start",
+                                    flexDirection: "column",
+                                    alignItems: msg.isUser ? "flex-end" : "flex-start"
+                                }}
                             >
-                                <ListItem
+                                {msg.image && (
+                                    <img
+                                        src={`https://eco-textile-app-backend.onrender.com/${msg.image}`}
+                                        alt="Uploaded"
+                                        style={{ maxWidth: "200px", borderRadius: 10, marginBottom: 6 }}
+                                    />
+                                )}
+                                <Box
                                     sx={{
-                                        justifyContent: msg.isUser ? "flex-end" : "flex-start",
-                                        flexDirection: "column",
-                                        alignItems: msg.isUser ? "flex-end" : "flex-start",
+                                        bgcolor: msg.isUser ? "#e3f2fd" : "#eeeeee",
+                                        borderRadius: 3,
+                                        px: 2,
+                                        py: 1,
+                                        maxWidth: "75%"
                                     }}
                                 >
-                                    {msg.image && (
-                                        <img
-                                            src={`https://eco-textile-app-backend.onrender.com/${msg.image}`}
-                                            alt="Uploaded"
-                                            style={{
-                                                maxWidth: "200px", borderRadius: 10, marginBottom: 6
-                                            }}
-                                        />
-                                    )}
-                                    <Box
-                                        sx={{
-                                            bgcolor: msg.isUser ? "#e3f2fd" : "#eeeeee",
-                                            borderRadius: 3,
-                                            px: 2,
-                                            py: 1,
-                                            maxWidth: "75%",
-                                        }}
-                                    >
-                                        <ReactMarkdown children={msg.message} remarkPlugins={[remarkGfm]} />
-                                    </Box>
-                                </ListItem>
-                                <Divider component="li" />
-                            </motion.div>
-                        ))}
-                        {typing && (
-                            <ListItem>
-                                <Box sx={{
+                                    <ReactMarkdown children={msg.message} remarkPlugins={[remarkGfm]} />
+                                </Box>
+                            </ListItem>
+                            <Divider component="li" />
+                        </motion.div>
+                    ))}
+                    {typing && (
+                        <ListItem>
+                            <Box
+                                sx={{
                                     bgcolor: "#eeeeee",
                                     px: 2,
                                     py: 1,
                                     borderRadius: 3,
                                     fontStyle: "italic",
-                                    color: "gray",
-                                }}>
-                                    typing...
-                                </Box>
-                            </ListItem>
-                        )}
-                        <div ref={messagesEndRef} />
-                    </List>
-                </Paper>
+                                    color: "gray"
+                                }}
+                            >
+                                typing...
+                            </Box>
+                        </ListItem>
+                    )}
+                    <div ref={messagesEndRef} />
+                </List>
+            </Box>
 
-                {/* Image Preview */}
-                {uploadedImage && (
-                    <Box sx={{ position: "relative", width: "100px", height: "100px", mb: 2 }}>
-                        <img
-                            src={URL.createObjectURL(uploadedImage)}
-                            alt="Preview"
-                            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
-                        />
-                        <IconButton
-                            onClick={() => setUploadedImage(null)}
-                            sx={{ position: "absolute", top: 0, right: 0, bgcolor: "white" }}
-                        >
-                            <Tooltip title="Remove">
-                                <DeleteIcon fontSize="small" />
-                            </Tooltip>
-                        </IconButton>
-                    </Box>
-                )}
+            {/* Image Preview */}
+            {uploadedImage && (
+                <Box sx={{ position: "relative", width: "100px", height: "100px", mb: 1 }}>
+                    <img
+                        src={URL.createObjectURL(uploadedImage)}
+                        alt="Preview"
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                    />
+                    <IconButton
+                        onClick={() => setUploadedImage(null)}
+                        sx={{ position: "absolute", top: 0, right: 0, bgcolor: "white" }}
+                    >
+                        <Tooltip title="Remove">
+                            <DeleteIcon fontSize="small" />
+                        </Tooltip>
+                    </IconButton>
+                </Box>
+            )}
 
-                {/* File Picker */}
-                <Paper
-                    elevation={2}
-                    sx={{
-                        border: "2px dashed #ccc",
-                        borderRadius: 2,
-                        padding: 2,
-                        textAlign: "center",
-                        mb: 2,
-                        cursor: "pointer",
-                    }}
-                    onClick={() => fileInputRef.current.click()}
-                >
-                    Drag and drop an image here or click to select
-                </Paper>
-                <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    style={{ display: "none" }}
-                    onChange={handleFileSelect}
-                />
+            {/* Drag & Drop */}
+            <Paper
+                elevation={2}
+                sx={{
+                    border: "2px dashed #ccc",
+                    borderRadius: 2,
+                    padding: 2,
+                    textAlign: "center",
+                    mb: 1,
+                    cursor: "pointer"
+                }}
+                onClick={() => fileInputRef.current.click()}
+            >
+                Drag and drop an image here or click to select
+            </Paper>
+            <input type="file" accept="image/*" ref={fileInputRef} style={{ display: "none" }} onChange={handleFileSelect} />
 
-                {/* Text Input */}
+            {/* Input & Send */}
+            <Box display="flex" alignItems="flex-end" gap={1}>
                 <TextField
                     variant="outlined"
                     placeholder="Type your message..."
-                    fullWidth
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => {
@@ -248,22 +260,23 @@ function Conversation({ conversationID }) {
                     multiline
                     minRows={1}
                     maxRows={4}
+                    fullWidth
                 />
-
-                <Box mt={2}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleSendMessage}
-                        disabled={loading}
-                        fullWidth
-                        endIcon={loading && <CircularProgress size={20} color="inherit" />}
-                    >
-                        {loading ? "Sending..." : "Send"}
-                    </Button>
-                </Box>
+                <IconButton
+                    onClick={handleSendMessage}
+                    disabled={loading}
+                    sx={{
+                        bgcolor: "#1976d2",
+                        color: "white",
+                        ":hover": { bgcolor: "#1565c0" },
+                        width: 48,
+                        height: 48
+                    }}
+                >
+                    {loading ? <CircularProgress size={20} color="inherit" /> : <span>➤</span>}
+                </IconButton>
             </Box>
-        </Container>
+        </Box>
     );
 }
 
