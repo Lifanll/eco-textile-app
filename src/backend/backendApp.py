@@ -513,7 +513,8 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
         # recycling agent
 
         recycle_agent_query = f"""
-        You are a Recycling Expert specializing in textile waste reduction.  
+        You are a Recycling Expert specializing in textile waste reduction. 
+        Do not give sustainability scores or eco-ratings. 
         Provide clear and actionable guidance on how users can **recycle or upcycle fabrics**.  
         If recycling options are unavailable, suggest **eco-friendly disposal alternatives**.
         Here is the user's query: {request.query}
@@ -550,7 +551,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
         Your job is to conclude content from other three agents.
         If the image path is empty, it means that user didn't upload an image.
         Focus on user query and give conversational response, you don't need to include all the information from other agents.
-        if the query is sent with "\n\n\n - Sent From VR Cardboard Headset. ", response will be read out by TTS instead of displaying text, so generate response best for read out.
+        if the query is sent with "- Sent From VR Cardboard Headset. ", response will be read out by TTS instead of displaying text, so generate response best for read out.
         Here are the response from the other three agent:
         Style agent:
         {style_agent_response}.
@@ -577,15 +578,6 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
             })
         else:
             messages.append({"role": "user", "content": final_agent_query})
-
-        # modified_query = (
-        #     f"If imaged uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}."
-        #     f"Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation. "
-        #     f"Focus on providing practical suggestions that directly address the user's request. "
-        #     f"Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question. "
-        #     f"Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given."
-        #     f"Here is the user's query: {request.query}"
-        # )
 
 
         # Get response from the LLM
