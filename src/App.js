@@ -43,6 +43,17 @@ const ProtectedRoute = ({ element }) => {
       navigate("/");
     }
   }, [navigate]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isAuthenticated()) {
+        alert("Session expired, please log in again.");
+        localStorage.clear();
+        window.location.href = "/";
+      }
+    }, 5000); // check every 5s
+  
+    return () => clearInterval(interval);
+  }, []);
   return element;
 };
 
