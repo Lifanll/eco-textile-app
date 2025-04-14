@@ -88,6 +88,7 @@ function AppContent() {
           </Typography>
           {isAuthenticated() && (
             <Button
+              aria-label="Logout"
               color="inherit"
               onClick={() => {
                 localStorage.clear();

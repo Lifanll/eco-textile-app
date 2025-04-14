@@ -20,35 +20,41 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
-        try {
-            const response = await fetch("https://eco-textile-app-backend.onrender.com/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ username, password }),
-            });
+        if (!username || !password) {
+            alert('Please enter both fields');
+            return;
+        }
+        else {
+            try {
+                const response = await fetch("https://eco-textile-app-backend.onrender.com/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
 
-            if (!response.ok) {
-                throw new Error("Failed to log in. Please check your credentials.");
+                if (!response.ok) {
+                    throw new Error("Failed to log in. Please check your credentials.");
+                }
+
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Save userID to localStorage for session management
+                localStorage.setItem("access_token", data.access_token);
+                localStorage.setItem("username", username);
+
+                // Navigate to dashboard on success
+                navigate("/dashboard");
+            } catch (error) {
+                console.error("Error during login:", error);
+                alert(error.message);
+            } finally {
+                setLoading(false);
             }
-
-            const data = await response.json();
-            if (data.error) {
-                throw new Error(data.error);
-            }
-
-            // Save userID to localStorage for session management
-            localStorage.setItem("access_token", data.access_token);
-            localStorage.setItem("username", username);
-
-            // Navigate to dashboard on success
-            navigate("/dashboard");
-        } catch (error) {
-            console.error("Error during login:", error);
-            alert(error.message);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -92,10 +98,10 @@ function Login() {
                 </form>
                 <Box mt={2} textAlign="center">
                     <Typography variant="body1">Don't have an account?</Typography>
-                    <Button 
-                        variant="outlined" 
-                        color="secondary" 
-                        fullWidth 
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        fullWidth
                         onClick={() => navigate("/signup")}
                     >
                         Sign Up
