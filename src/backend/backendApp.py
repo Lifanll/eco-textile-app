@@ -501,7 +501,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
             sustain_agent_inputs.append({"role": "user", "content": sustain_agent_query})
 
         sustain_agent_chat_complete = client.chat.completions.create(
-            temperature= 0.4,
+            temperature= 0.2,
             messages=sustain_agent_inputs,
             model=GPT_MODEL,
         )
@@ -515,8 +515,8 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
         recycle_agent_query = f"""
         You are a Recycling Expert specializing in textile waste reduction. 
         Do not give sustainability scores or eco-ratings. 
-        Provide clear and actionable guidance on how users can **recycle or upcycle fabrics**.  
-        If recycling options are unavailable, suggest **eco-friendly disposal alternatives**.
+        Provide clear and actionable guidance on how users can recycle or upcycle fabrics.  
+        If recycling options are unavailable, suggest eco-friendly disposal alternatives.
         Here is the user's query: {request.query}
         """     
 
@@ -536,7 +536,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
             recycle_agent_inputs.append({"role": "user", "content": recycle_agent_query})
 
         recycle_agent_chat_complete = client.chat.completions.create(
-            temperature= 0.4,
+            temperature= 0.3,
             messages=recycle_agent_inputs,
             model=GPT_MODEL,
         )
