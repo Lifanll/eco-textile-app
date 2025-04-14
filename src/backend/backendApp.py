@@ -479,7 +479,6 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
 
         sustain_agent_query = f"""
         If image uploaded, identify if it's a textile made staff, if not, say you don't think it's a textile. otherwise use the identified textile. The identified textile from the image is {request.textile}.
-        Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
         Focus on providing practical suggestions that directly address the user's request.
         Only include eco-friendly options, alternatives, laundering methods, recycling, upcycling, or disposal practices if they are relevant to the user's question.
         Give a score in sustainability out of 5 if a certain textile is asked for the first time, consider Resource Consumption, Emissions, Waste Generation and Chemical Usage. Explain the details only if users want to know more about what this score is given.
@@ -503,7 +502,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
 
         sustain_agent_chat_complete = client.chat.completions.create(
             temperature= 0.4,
-            messages=messages,
+            messages=sustain_agent_inputs,
             model=GPT_MODEL,
         )
 
@@ -537,7 +536,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
 
         recycle_agent_chat_complete = client.chat.completions.create(
             temperature= 0.4,
-            messages=messages,
+            messages=recycle_agent_inputs,
             model=GPT_MODEL,
         )
 
