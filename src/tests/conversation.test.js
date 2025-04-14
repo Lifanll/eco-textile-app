@@ -12,18 +12,27 @@ beforeEach(() => {
 
 
 describe('Conversation component', () => {
-  it('renders input field', () => {
-    render(<MemoryRouter><Conversation conversationID={1} /></MemoryRouter>);
-    const input = screen.getByPlaceholderText(/type your message/i);
-    expect(input).toBeInTheDocument();
+  const mockConversationID = '12345';
+  it('renders message input and send button', () => {
+    render(<MemoryRouter><Conversation conversationID={mockConversationID} /></MemoryRouter>);
+    expect(screen.getByPlaceholderText(/type your message/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /➤/i })).toBeInTheDocument();
   });
 
+
   it('does not allow empty message/image submission', () => {
-    render(<MemoryRouter><Conversation conversationID={1} /></MemoryRouter>);
+    render(<MemoryRouter><Conversation conversationID={mockConversationID} /></MemoryRouter>);
     const sendButton = screen.getByRole('button', { name: /➤/i });
     fireEvent.click(sendButton);
     expect(window.alert).toHaveBeenCalled(); // requires jest.spyOn for window.alert
   });
 
-  // ...add more tests to check fake typing, scroll to bottom, etc.
+  it('allows typing and sends message on button click', () => {
+    render(<MemoryRouter><Conversation conversationID={mockConversationID} /></MemoryRouter>);
+    const input = screen.getByPlaceholderText(/type your message/i);
+    fireEvent.change(input, { target: { value: 'Hello' } });
+    expect(input.value).toBe('Hello');
+    fireEvent.click(screen.getByRole('button', { name: /➤/i }));
+    expect(input.value).toBe('');
+  });
 });

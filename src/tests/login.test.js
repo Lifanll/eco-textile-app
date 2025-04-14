@@ -10,25 +10,27 @@ beforeEach(() => {
 });
 
 describe('Login Page', () => {
-  it('renders login form', () => {
+  it('renders login fields and buttons', () => {
     render(
-    <MemoryRouter>
-      <Login />
-    </MemoryRouter>
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>
     );
+
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign up/i })).toBeInTheDocument();
   });
 
-  it('disables login if fields are empty', () => {
+  it('shows alert when fields are empty on submit', () => {
     render(
-    <MemoryRouter>
-      <Login />
-    </MemoryRouter>
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>
     );
-    const loginButton = screen.getByRole('button', { name: /sign in/i });
-    fireEvent.click(loginButton);
-    // Assuming alert is used for error
+
+    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
     expect(window.alert).toHaveBeenCalled();
   });
 });

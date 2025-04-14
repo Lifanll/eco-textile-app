@@ -26,4 +26,19 @@ describe('ConversationLayout', () => {
     );
     expect(screen.getByText(/my conversations/i)).toBeInTheDocument();
   });
+  it('renders children and allows sidebar toggle', () => {
+    const { getByText } = render(
+      <MemoryRouter>
+        <ConversationLayout
+          activeConversationId={null}
+          onSelectConversation={() => {}}
+          drawerOpen={true}
+          setDrawerOpen={() => {}}
+        >
+          <div>Test Child</div>
+        </ConversationLayout>
+      </MemoryRouter>
+    );
+    expect(getByText('Test Child')).toBeInTheDocument();
+  });
 });
