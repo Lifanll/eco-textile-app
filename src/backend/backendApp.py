@@ -443,6 +443,7 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
         style_agent_query = f"""
         You are an expert on fashion design focued on style, you do not have to consider any other part of user query but style related.
         If image uploaded, identify if they're clothing. If not, give simple answers to say that you don't think it's clothes.
+        Consider colors for outfits combination when giving suggestion.
         Otherwise, give a type for this in terms of style, along with some suggestions for outfit. When suggesting on outfit, consider sustainability.
         Respond specifically to the user's query without unnecessary details and try to make it interactive like a conversation.
         Here is the user's query: {request.query}
@@ -550,13 +551,15 @@ async def ask_question(request: AskRequest = Body(...), user_id: int = Depends(g
         final_agent_query = f"""
         Your job is to conclude content from other three agents.
         If the image path is empty, it means that user didn't upload an image.
+        If use ask about level of sustainability, you should include the score from sustainability agent.
+        Include colors when a image is uploaded to identify to ensure color information in conversation history.
         Focus on user query and give conversational response, you don't need to include all the information from other agents.
         if the query is sent with "- Sent From VR Cardboard Headset. ", response will be read out by TTS instead of displaying text, so generate response best for read out.
         Here are the response from the other three agent:
         Style agent:
         {style_agent_response}.
 
-        Sustainablitity agent:
+        Sustainability agent:
         {sustain_agent_response}.
 
         Recycle agent:
